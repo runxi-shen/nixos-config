@@ -1,11 +1,7 @@
 { config, pkgs, lib, home-manager, ... }:
 
 let
-  user           = "dustin";
-  myEmacsLauncher = pkgs.writeScript "emacs-launcher.command" ''
-    #!/bin/sh
-    emacsclient -c -n &
-  '';
+  user           = "runxishen";
   sharedFiles     = import ../shared/files.nix { inherit config pkgs; };
   additionalFiles = import ./files.nix { inherit user config pkgs; };
 in
@@ -42,6 +38,7 @@ in
 
   home-manager = {
     useGlobalPkgs = true;
+    backupFileExtension = "backup";
     users.${user} = { pkgs, config, lib, ... }:
       {
         home = {
@@ -50,7 +47,6 @@ in
           file = lib.mkMerge [
             sharedFiles
             additionalFiles
-            { "emacs-launcher.command".source = myEmacsLauncher; }
           ];
           stateVersion = "23.11";
         };
@@ -68,19 +64,10 @@ in
       { path = "/System/Applications/Messages.app/"; }
       { path = "${pkgs.alacritty}/Applications/Alacritty.app/"; }
       { path = "/System/Applications/Music.app/"; }
-      { path = "/System/Applications/Photos.app/"; }
-      { path = "/System/Applications/Photo Booth.app/"; }
-      { path = "/System/Applications/TV.app/"; }
-      { path = "${pkgs.jetbrains.phpstorm}/Applications/PhpStorm.app/"; }
-      { path = "/Applications/TablePlus.app/"; }
+      { path = "/Applications/Google Chrome.app/"; }
+      { path = "/Applications/Visual Studio Code.app/"; }
       { path = "/Applications/Claude.app/"; }
       { path = "/Applications/Discord.app/"; }
-      { path = "/Applications/TickTick.app/"; }
-      { path = "/System/Applications/Home.app/"; }
-      {
-        path    = toString myEmacsLauncher;
-        section = "others";
-      }
       {
         path    = "${config.users.users.${user}.home}/.local/share/";
         section = "others";

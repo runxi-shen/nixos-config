@@ -1,7 +1,6 @@
 { agenix, config, pkgs, ... }:
 let 
-  user = "dustin";
-  myEmacs = import ../../modules/shared/emacs.nix { inherit pkgs; };
+  user = "runxishen";
 in
 {
   imports = [
@@ -26,7 +25,6 @@ in
   };
   # Load configuration that is shared across systems
   environment.systemPackages = with pkgs; [
-    myEmacs
     agenix.packages."${pkgs.system}".default
   ] ++ (import ../../modules/shared/packages.nix { inherit pkgs; });
 
