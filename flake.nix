@@ -45,7 +45,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     secrets = {
-      url = "git+ssh://git@github.com/dustinlyons/nix-secrets.git";
+      url = "git+ssh://git@github.com/runxi-shen/nix-secrets.git";
       flake = false;
     };
     chaotic = {
@@ -55,7 +55,7 @@
   };
   outputs = { self, darwin, claude-desktop, claude-code, nix-homebrew, homebrew-bundle, homebrew-core, homebrew-cask, home-manager, plasma-manager, nixpkgs, flake-utils, disko, agenix, secrets, chaotic } @inputs:
     let
-      user = "dustin";
+      user = "runxishen";
       linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
       darwinSystems = [ "aarch64-darwin" "x86_64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs (linuxSystems ++ darwinSystems) f;

@@ -1,11 +1,5 @@
-{ config, pkgs, claude-code, ... }:
+{ config, pkgs, ... }:
 
-let
-  emacsOverlaySha256 = "1ws890244a4f7140hlkgvcc41m5k6bbphpqc3yrh2ipkmg9vjd4m";
-  
-  # Shared Emacs package configuration
-  myEmacs = import ./emacs.nix { inherit pkgs; };
-in
 {
 
   nixpkgs = {
@@ -22,12 +16,9 @@ in
       # Apply each overlay found in the /overlays directory
       let
         path = ../../overlays;
-        hostname =
-          if (config.networking.hostName or null) == null
-          then ""
-          else config.networking.hostName;
+        hostname = if config.networking.hostName or null == null then "" else config.networking.hostName;
         excludeForHost = {
-          "garfield" = [ "cider-appimage.nix" "obsidian-appimage.nix" "curseforge-appimage.nix" ];
+          "garfield" = [ "cider-appimage.nix" ];
         };
         excludedFiles = excludeForHost.${hostname} or [];
       in with builtins;
@@ -38,10 +29,6 @@ in
             && !(elem n excludedFiles))
                   (attrNames (readDir path)))
 
-      ++ [(import (builtins.fetchTarball {
-               url = "https://github.com/nix-community/emacs-overlay/archive/refs/heads/master.tar.gz";
-               sha256 = emacsOverlaySha256;
-           }))]
-      ++ [ claude-code.overlays.default ];
+      ;
   };
 }
