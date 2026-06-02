@@ -44,7 +44,7 @@ with pkgs; [
   git                    # Version control (also managed by home-manager)
   go                     # Go programming language
   gopls                  # Go language server
-  nodejs_20              # Node.js JavaScript runtime
+  nodejs_22              # Node.js JavaScript runtime (LTS)
   myPython               # Python 3 with common packages
   sqlite                 # SQL database engine
   uv                     # Python package installer
