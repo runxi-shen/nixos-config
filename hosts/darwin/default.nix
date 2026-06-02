@@ -84,7 +84,7 @@ in
     };
     keyboard = {
       enableKeyMapping = true;
-      remapCapsLockToControl = true;
+      remapCapsLockToControl = false;
     };
   };
 }

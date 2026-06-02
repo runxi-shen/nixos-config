@@ -31,6 +31,7 @@ with pkgs; [
   jq                     # JSON processor
   killall                # Kill processes by name
   ncdu                   # Disk space utility
+  ngrok                  # Secure tunnels to localhost
   ripgrep                # Fast text search tool
   tmux                   # Terminal multiplexer
   tree                   # Directory tree viewer
