@@ -5,6 +5,7 @@ let
     virtualenv
     requests
     pyyaml
+    markitdown            # Convert files/office docs to Markdown (CLI + library)
   ]);
 
   myFonts = import ./fonts.nix { inherit pkgs; };
@@ -44,6 +45,7 @@ with pkgs; [
   git                    # Version control (also managed by home-manager)
   go                     # Go programming language
   gopls                  # Go language server
+  markitdown-mcp         # MCP server exposing markitdown to AI tools
   nodejs_22              # Node.js JavaScript runtime (LTS)
   myPython               # Python 3 with common packages
   sqlite                 # SQL database engine
