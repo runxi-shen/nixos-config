@@ -21,6 +21,8 @@ _:
   # Productivity
   "obsidian"
   "zotero"
+  # From local tap (taps/zenkit)
+  "runxishen/zenkit/zenkit-todo"
 
   # Entertainment
   "vlc"
