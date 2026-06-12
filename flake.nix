@@ -118,7 +118,7 @@
           modules = [
             home-manager.darwinModules.home-manager
             nix-homebrew.darwinModules.nix-homebrew
-            {
+            ({ pkgs, ... }: {
               nix-homebrew = {
                 inherit user;
                 enable = true;
@@ -126,11 +126,15 @@
                   "homebrew/homebrew-core" = homebrew-core;
                   "homebrew/homebrew-cask" = homebrew-cask;
                   "homebrew/homebrew-bundle" = homebrew-bundle;
+                  # Local tap for casks not in homebrew-cask (must be a package, not a bare path)
+                  "runxishen/homebrew-zenkit" = pkgs.runCommandLocal "homebrew-zenkit" { } ''
+                    cp -R ${./taps/zenkit} $out
+                  '';
                 };
                 mutableTaps = false;
                 autoMigrate = true;
               };
-            }
+            })
             ./hosts/darwin
           ];
         }
