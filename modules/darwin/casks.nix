@@ -4,6 +4,7 @@ _:
   # Development Tools
   "claude"
   "visual-studio-code"
+  "wezterm"
 
   # Communication Tools
   "discord"

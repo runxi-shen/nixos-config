@@ -8,4 +8,8 @@ in
   ".ssh/id_github.pub" = {
     text = githubPublicKey;
   };
+
+  ".config/wezterm/wezterm.lua" = {
+    source = ./config/wezterm.lua;
+  };
 }
