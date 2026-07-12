@@ -39,6 +39,7 @@ with pkgs; [
   wget                   # File downloader
 
   # Dev tools
+  codex                  # OpenAI Codex CLI coding agent
   direnv                 # Environment variable management per directory
   gcc                    # GNU Compiler Collection
   gh                     # GitHub CLI
