@@ -55,7 +55,7 @@ let name = "Runxi Shen";
       export PATH=$HOME/.pnpm-packages/bin:$HOME/.pnpm-packages:$PATH
       export PATH=$HOME/.npm-packages/bin:$HOME/bin:$PATH
       export PATH=$HOME/.local/share/bin:$PATH
-      export PATH=$HOME/.local/bin:$PATH      # user-local scripts (claude-science, pip --user bins)
+      export PATH=$PATH:$HOME/.local/bin      # user-local scripts (claude-science, pip); appended so Nix's claude wins over any native install
 
       # Remove history data we don't want to see
       export HISTIGNORE="pwd:ls:cd"
