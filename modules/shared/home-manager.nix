@@ -83,12 +83,12 @@ let name = "Runxi Shen";
   git = {
     enable = true;
     ignores = [ "*.swp" ".DS_Store" ];
-    userName = name;
-    userEmail = email;
     lfs = {
       enable = true;
     };
-    extraConfig = {
+    settings = {
+      user.name = name;
+      user.email = email;
       init.defaultBranch = "main";
       core = {
 	    editor = "vim";
