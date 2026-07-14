@@ -36,9 +36,10 @@ let name = "Runxi Shen";
       # Save and restore last directory
       LAST_DIR_FILE="$HOME/.zsh_last_dir"
       
-      # Save directory on every cd
+      # Save directory on every cd (path inlined: chpwd also fires in
+      # non-interactive shells where LAST_DIR_FILE is not set)
       function chpwd() {
-        echo "$PWD" > "$LAST_DIR_FILE"
+        echo "$PWD" > "$HOME/.zsh_last_dir"
       }
       
       # Restore last directory on startup
