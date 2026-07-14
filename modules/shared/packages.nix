@@ -49,6 +49,7 @@ with pkgs; [
   markitdown-mcp         # MCP server exposing markitdown to AI tools
   nodejs_22              # Node.js JavaScript runtime (LTS)
   myPython               # Python 3 with common packages
+  pi-coding-agent        # Pi coding agent CLI (read/bash/edit/write tools)
   sqlite                 # SQL database engine
   uv                     # Python package installer
 
