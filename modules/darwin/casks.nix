@@ -25,6 +25,9 @@ _:
   # From local tap (taps/zenkit)
   "runxishen/zenkit/zenkit-todo"
 
+  # Graphics & Design
+  "inkscape"
+
   # Entertainment
   "vlc"
 
