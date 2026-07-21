@@ -19,6 +19,9 @@ _:
   "appcleaner"
   "raycast"
 
+  # AI Assistants
+  "chatgpt"
+
   # Productivity
   "obsidian"
   "zotero"
