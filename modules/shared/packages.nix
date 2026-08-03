@@ -44,6 +44,7 @@ with pkgs; [
   gcc                    # GNU Compiler Collection
   gh                     # GitHub CLI
   git                    # Version control (also managed by home-manager)
+  glab                   # GitLab CLI
   go                     # Go programming language
   gopls                  # Go language server
   markitdown-mcp         # MCP server exposing markitdown to AI tools
@@ -52,6 +53,11 @@ with pkgs; [
   pi-coding-agent        # Pi coding agent CLI (read/bash/edit/write tools)
   sqlite                 # SQL database engine
   uv                     # Python package installer
+
+  # OCR & document processing
+  ocrmypdf               # Add a searchable text layer to scanned PDFs (uses tesseract + ghostscript)
+  poppler-utils          # pdftoppm / pdftotext / pdfinfo — render and extract PDFs
+  tesseract              # OCR engine
 
   # Editors
   zed-editor             # Modern code editor
