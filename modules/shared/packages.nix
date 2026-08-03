@@ -39,6 +39,7 @@ with pkgs; [
   wget                   # File downloader
 
   # Dev tools
+  claude-code            # Anthropic Claude Code CLI (declarative via sadjow/claude-code-nix overlay)
   codex                  # OpenAI Codex CLI coding agent
   direnv                 # Environment variable management per directory
   gcc                    # GNU Compiler Collection

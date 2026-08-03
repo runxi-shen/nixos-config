@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, claude-code, ... }:
 
 {
 
@@ -22,6 +22,16 @@
         };
         excludedFiles = excludeForHost.${hostname} or [];
       in with builtins;
+      # Declarative Claude Code from the sadjow/claude-code-nix flake input.
+      # Kept inline (not a file in /overlays) because the auto-loader below
+      # imports overlay files as bare `final: prev:` functions with no access
+      # to flake `inputs`; here `claude-code` is in scope via module args.
+      [
+        (final: prev: {
+          claude-code = claude-code.packages.${final.stdenv.hostPlatform.system}.default;
+        })
+      ]
+      ++
       map (n: import (path + ("/" + n)))
           (filter (n:
             (match ".*\\.nix" n != null ||
