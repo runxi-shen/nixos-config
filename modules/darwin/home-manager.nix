@@ -40,6 +40,25 @@ in
     useGlobalPkgs = true;
     backupFileExtension = "backup";
     users.${user} = { pkgs, config, lib, ... }:
+      let
+        # Clean-named shortcuts to cloud sync roots.
+        #
+        # mkOutOfStoreSymlink is essential here: a plain `source` would try to
+        # copy the target into the nix store, which for a live cloud folder
+        # would be catastrophic. This emits a direct symlink to the real path.
+        #
+        # The sync roots themselves are NEVER renamed — OneDrive's lives under
+        # ~/Library/CloudStorage and is managed by the macOS File Provider API,
+        # and Nutstore records its root path in ~/.nutstore/db/nutstore.db.
+        # These are additive aliases only.
+        cloudLinks = {
+          "Purdue_OneDrive".source = config.lib.file.mkOutOfStoreSymlink
+            "/Users/${user}/Library/CloudStorage/OneDrive-purdue.edu";
+
+          "Nutstore".source = config.lib.file.mkOutOfStoreSymlink
+            "/Users/${user}/NutstoreFiles/Nutstore";
+        };
+      in
       {
         home = {
           enableNixpkgsReleaseCheck = false;
@@ -47,6 +66,7 @@ in
           file = lib.mkMerge [
             sharedFiles
             additionalFiles
+            cloudLinks
           ];
           stateVersion = "23.11";
         };
