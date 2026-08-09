@@ -28,6 +28,16 @@ in
     agenix.packages."${pkgs.system}".default
   ] ++ (import ../../modules/shared/packages.nix { inherit pkgs; });
 
+  # Codex (Rust/rustls) trusts the Obsidian Local REST API's self-signed cert.
+  # It reads CODEX_CA_CERTIFICATE, which is ADDITIVE to the native root store,
+  # so this cannot affect trust for any other connection. Set via launchd so
+  # the ChatGPT.app GUI inherits it -- it is not started from a shell, and
+  # `launchctl setenv` does not survive a reboot.
+  # NB: the cert expires 2027-06-14; ~/.codex/scripts/obsidian_ca_env.sh
+  # re-exports it from the Obsidian plugin config when it rotates.
+  launchd.user.envVariables.CODEX_CA_CERTIFICATE =
+    "/Users/${user}/.claude/obsidian-local-rest-api.pem";
+
   #launchd.user.agents = {
   #  emacs = {
   #    path = [ config.environment.systemPath ];
