@@ -69,6 +69,27 @@ in
             cloudLinks
           ];
           stateVersion = "23.11";
+
+          # Squat the path OneDrive uses for its own home-folder shortcut, so
+          # the space-laden "OneDrive - purdue.edu" cannot come back after an
+          # app update. OneDrive exposes no preference to disable it.
+          #
+          # A 0-byte file with uchg makes OneDrive's unlink() fail with EPERM,
+          # and its symlink() then fails with EEXIST. `hidden` keeps it out of
+          # Finder. Use ~/Purdue_OneDrive (declared above) instead.
+          #
+          # To undo:  chflags nouchg ~/"OneDrive - purdue.edu" && rm ~/"OneDrive - purdue.edu"
+          activation.onedriveShortcutTombstone =
+            lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              p="$HOME/OneDrive - purdue.edu"
+              # Only ever replace a symlink or nothing — never a real file.
+              if [ -L "$p" ] || [ ! -e "$p" ]; then
+                /usr/bin/chflags nouchg "$p" 2>/dev/null || true
+                rm -f "$p" || true
+                touch "$p" || true
+              fi
+              /usr/bin/chflags uchg,hidden "$p" 2>/dev/null || true
+            '';
         };
         programs = {} // import ../shared/home-manager.nix { inherit config pkgs lib; };
         manual.manpages.enable = false;
