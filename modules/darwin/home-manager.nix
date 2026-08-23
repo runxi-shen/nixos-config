@@ -30,6 +30,16 @@ in
     #
     enable = true;
     casks  = pkgs.callPackage ./casks.nix {};
+
+    # Both of these already default to false upstream; set explicitly so a
+    # future default change can't silently start upgrading casks on rebuild.
+    # VS Code in particular must stay pinned: Remote-SSH requires the remote
+    # server to match the client's exact commit hash, and karkinos pulls that
+    # 223MB server from Microsoft's CDN at ~150KB/s (~25 min per version bump).
+    onActivation = {
+      upgrade    = false;
+      autoUpdate = false;
+    };
     #masApps = {
     #  "hidden-bar"   = 1452453066;
     #  "wireguard"    = 1451685025;
