@@ -163,7 +163,7 @@ nix run .#build                     # builds this Mac, does not switch
 
 ---
 
-## Phase 1 — Prune inherited cruft — status: TODO
+## Phase 1 — Prune inherited cruft — status: DONE (2d2c07f6)
 
 **Goal:** delete the previous owner's machines and dead overlays. Nothing else.
 
@@ -194,6 +194,52 @@ nix run .#build
 regenerated with the pruned input set.
 
 **Commit:** `Remove upstream machines, templates, and unused overlays`
+
+**Deviations at execution time**
+
+The phase as written was **not self-consistent**: `plasma-manager`, `chaotic` and `disko`
+are consumed at `flake.nix:149-153`, inside the `nixosConfigurations` block that builds
+**felix** — not garfield. `modules/nixos/systemd.nix` was imported by
+`hosts/nixos/default.nix:16` and `modules/nixos/kde-config.nix` by
+`modules/nixos/home-manager.nix:8`, both reachable only via felix. So neither the stated
+input-pruning nor those two deletions could succeed while felix existed, yet Phase 1 never
+mentioned felix and the Target structure has no `hosts/nixos` at all.
+
+Resolved by confirming ownership and widening the deletion, with the owner's approval:
+
+- **felix is the upstream owner's machine.** Every commit touching
+  `hosts/nixos/default.nix` is authored by Dustin Lyons, from `86813254` (2023-11-17) to
+  `235b5cc0` (2026-06-26). `time.timeZone = "America/Kentucky/Louisville"`, an
+  `amdgpu` RX 9070, and a `PG278Q.bin` EDID blob for his ASUS ROG Swift. Same category as
+  garfield; the plan simply failed to name it.
+- **Rule adopted from `afermg/nixos-config`:** `homes/` may carry other people's profiles,
+  but `machines/` carries only hardware you own — Alan keeps `nixosConfigurations` solely
+  for `moby`, his own server. This repo owns no personal Linux machine, so all NixOS
+  *system* config goes. Re-add a host directory if that ever changes.
+- Also deleted `tests/`, `overlays/playwright.nix` (only consumer was
+  `modules/nixos/packages.nix`), and `.github/workflows/{build,build-template,
+  update-flake-lock}.yml` — all three run `nix flake init -t
+  github:dustinlyons/nixos-config#starter`, i.e. they test *upstream's* templates. They are
+  the CI half of the cord Phase 0 cut, and `update-flake-lock.yml` was scheduled weekly and
+  would have auto-PR'd an unpinned `flake.lock` over the deliberate nixpkgs pin.
+  `lint.yml` (statix) is kept.
+
+**Reference alignment brought forward from Phase 4**
+
+`overlays/` was a directory scan mapping every `*.nix` into an **anonymous list**, so no
+individual overlay was addressable. Phase 4's `overlays = [ outputs.overlays.claude-code ]`
+therefore could not have worked — this flake had no `overlays` output at all. Replaced with
+`overlays/default.nix` returning a **named attrset** exported as `outputs.overlays`, copying
+`afermg/nixos-config`. `modules/shared/default.nix` now consumes
+`builtins.attrValues outputs.overlays`, preserving prior behaviour exactly, and the
+previously inlined `claude-code` overlay moved into the file with its siblings.
+`nix flake check` now reports `overlays.claude-code` and `overlays.pandas-stubs` as
+first-class checked outputs.
+
+**`nix flake lock`, never `nix flake update`.** `flake.nix:4` says `nixos-unstable`, but the
+lock deliberately pins root nixpkgs to `241313f4e8e5` (2026-07-19) for the
+livekit-on-darwin breakage. `lock` drops orphaned nodes and keeps existing pins; `update`
+would silently un-pin. 15 nodes dropped, 10 root inputs remain, pin intact.
 
 ---
 
@@ -315,6 +361,13 @@ homeConfigurations."rshen@oppy" = lib.homeManagerConfiguration {
 Baking `_module.args` and `nixpkgs` *into* the module is deliberate, copied from Alan's
 comment in `afermg/nixos-config`: a consumer's `extraSpecialArgs` would otherwise shadow
 this flake's `outputs`.
+
+**Prerequisite already landed in Phase 1.** `outputs.overlays.claude-code` did not exist
+when this phase was written — `overlays/` was an anonymous directory scan. Phase 1 replaced
+it with named overlays exported as `outputs.overlays`, so the snippet above now resolves.
+Note also that afermg goes further than `_module.args` alone: `homes/amunoz/home.nix` takes
+a **namespaced** `amunozInputs ? inputs` argument so a consumer's generic `inputs` cannot
+shadow this flake's package pins. Consider `rshenInputs` here.
 
 **Verify**
 
