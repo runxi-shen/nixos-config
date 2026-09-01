@@ -3,6 +3,13 @@
 { pkgs }:
 
 with pkgs; [
+  # C
+  # Coding agents that stay on the Macs. Deliberately NOT in
+  # homes/rshen/dev.nix: that profile ships to oppy/spirit/karkinos, which are
+  # shared lab machines that do not have these today and did not ask for them.
+  # claude-code is the exception and stays portable -- neusis already installs it.
+  codex # OpenAI Codex CLI coding agent
+
   # D
   dockutil # Manage icons in the dock
 
@@ -25,5 +32,8 @@ with pkgs; [
 
   # F
   fswatch # File change monitor
+
+  # P
+  pi-coding-agent # Pi coding agent CLI (read/bash/edit/write tools); binary is `pi`
   # rpi-imager # Raspberry PI SD card imager (commented out - broken in current nixpkgs, build fails trying to fetch git)
 ]

@@ -16,6 +16,11 @@ _:
 
   # Utility Tools
   "1password"
+  # Cask rather than nixpkgs' bitwarden-desktop: a GUI password manager wants a
+  # real /Applications bundle for Spotlight, browser integration and Touch ID
+  # unlock. Nix-installed .app bundles reach ~/Applications as store symlinks,
+  # which Spotlight does not index.
+  "bitwarden"
   "appcleaner"
   "raycast"
 

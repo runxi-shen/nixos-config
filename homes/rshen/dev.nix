@@ -1,6 +1,10 @@
 # Development toolchain. Portable: the lab servers get exactly this set too,
 # which is the point of exporting the profile rather than duplicating it in
 # neusis.
+#
+# Mac-only dev tools go in modules/darwin/packages.nix instead. Adding one here
+# silently installs it on every shared lab machine, so the bar for this file is
+# "I want this on oppy/spirit/karkinos too".
 { pkgs, ... }:
 
 let
@@ -15,7 +19,6 @@ in
 {
   home.packages = with pkgs; [
     claude-code # Anthropic Claude Code CLI (declarative via the claude-code overlay)
-    codex # OpenAI Codex CLI coding agent
     direnv # Environment variable management per directory
     gcc # GNU Compiler Collection
     gh # GitHub CLI
@@ -26,7 +29,6 @@ in
     markitdown-mcp # MCP server exposing markitdown to AI tools
     nodejs_22 # Node.js JavaScript runtime (LTS)
     myPython # Python 3 with common packages
-    pi-coding-agent # Pi coding agent CLI (read/bash/edit/write tools)
     pnpm # Fast npm alternative; `dsh plugin` forwards to it
     sqlite # SQL database engine
     uv # Python package installer

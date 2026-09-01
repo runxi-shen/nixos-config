@@ -33,6 +33,16 @@
     agenix.packages."${pkgs.system}".default
   ];
 
+  # Authenticate sudo with Touch ID. Every rebuild needs sudo (see
+  # nix-darwin#1457), so this is the difference between typing a password on
+  # every switch and touching the sensor.
+  #
+  # Writes /etc/pam.d/sudo_local rather than patching /etc/pam.d/sudo, which is
+  # why it survives macOS updates -- Apple replaces sudo but leaves sudo_local.
+  # Still requires an interactive session: it cannot rescue a rebuild driven
+  # from a process with no TTY.
+  security.pam.services.sudo_local.touchIdAuth = true;
+
   system = {
     # Turn off NIX_PATH warnings now that we're using flakes
     checks.verifyNixPath = false;

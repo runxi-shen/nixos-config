@@ -349,7 +349,7 @@ hardcodes, now derived rather than written.
 
 ---
 
-## Phase 3 — Hostname-keyed Macs — status: TODO
+## Phase 3 — Hostname-keyed Macs — status: DONE (d485bdca)
 
 **Goal:** one Mac becomes N Macs.
 
@@ -433,6 +433,43 @@ claude --version
 hardcoded system; post-switch checks above all pass.
 
 **Commit:** `Key darwinConfigurations by hostname with per-host user`
+
+**Deviations and decisions at execution time**
+
+- **Hostname mismatch, solved by aliasing.** `scutil --get LocalHostName` returns
+  `Runxis-MacBook-Pro`, not the plan's clean `runxi-mbp` key. Rather than rename the Mac or
+  adopt an ugly key, both names bind to the same `mkDarwin` result — verified identical
+  `drvPath`. `nix eval .#darwinConfigurations --apply builtins.attrNames` →
+  `[ "Runxis-MacBook-Pro" "runxi-mbp" ]`.
+- **No `lib/default.nix`.** `mkDarwin { host, user }` is an inline `let` inside
+  `darwinConfigurations`, per `afermg/nixos-config`. `system` is not a parameter —
+  aarch64-darwin is the only Darwin target.
+- **More moved to the host file than the phase listed.** Beyond dsh-web, the cloud links and
+  the tombstone, `hosts/darwin/runxi-mbp.nix` also takes the casks, the dock entries (per the
+  Target structure), and the `CODEX_CA_CERTIFICATE` launchd variable — that pem is generated
+  by *this* machine's Obsidian install, so leaving it shared would point a second Mac at a
+  nonexistent file.
+- **`apps/aarch64-darwin/apply` deleted too.** Upstream's fresh-install onboarding script:
+  it `sed`-replaced `%USER%` tokens across *every file in the tree*, spliced `flake.nix`
+  against the `disko` anchor Phase 1 removed (so it would now truncate the flake), and opened
+  the upstream repo to ask for a star. Running it on a configured machine would corrupt the
+  config. `build`, `build-switch` and `rollback` now resolve the host at runtime and accept
+  an explicit override; `build-switch` fails with the known-host list *before* reaching sudo.
+
+**Proof it was a pure refactor:** the new system derivation has byte-identical `inputDrvs`
+to the pre-phase one and an identical `home-files` list. The sole textual delta in the whole
+closure was one em-dash normalized to `--` inside an activation-script comment.
+
+**Post-switch verification (all passed).** `/run/current-system` matched the expected
+toplevel; all 10 dock entries intact; `~/Purdue_OneDrive` and `~/Nutstore` resolve through
+the store hop to the real cloud directories; the OneDrive tombstone is still 0-byte
+`uchg,hidden`; `dsh-web` loaded; `claude --version` = 2.1.220. As predicted,
+`/Applications/Nix Apps/` is now empty and `mdfind` finds no Zed — the owner accepted this
+before the switch.
+
+**Note for a second Mac:** `hosts/darwin/runxi-mbp.nix` calls
+`modules/darwin/casks.nix`, which is therefore now effectively *this host's* cask list
+despite living under `modules/`. A second host should get its own list rather than share it.
 
 ---
 
