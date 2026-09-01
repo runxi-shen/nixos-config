@@ -1,23 +1,10 @@
 {
-  description = "General Purpose Configuration for macOS and NixOS";
+  description = "General Purpose Configuration for macOS";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     home-manager.url = "github:nix-community/home-manager";
     agenix.url = "github:ryantm/agenix";
     claude-code.url = "github:sadjow/claude-code-nix";
-    claude-desktop = {
-      url = "github:k3d3/claude-desktop-linux-flake";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
-      };
-    };
-    plasma-manager = {
-      url = "github:nix-community/plasma-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.follows = "home-manager";
-    };
     darwin = {
       url = "github:LnL7/nix-darwin/master";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,26 +24,23 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
-    disko = {
-      url = "github:nix-community/disko";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     secrets = {
       url = "git+ssh://git@github.com/runxi-shen/nix-secrets.git";
       flake = false;
     };
-    chaotic = {
-      url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
-  outputs = { self, darwin, claude-desktop, claude-code, nix-homebrew, homebrew-bundle, homebrew-core, homebrew-cask, home-manager, plasma-manager, nixpkgs, flake-utils, disko, agenix, secrets, chaotic } @inputs:
+  outputs = { self, darwin, claude-code, nix-homebrew, homebrew-bundle, homebrew-core, homebrew-cask, home-manager, nixpkgs, agenix, secrets } @inputs:
     let
+      inherit (self) outputs;
       user = "runxishen";
+      # Kept for devShells and, from Phase 4 on, the Linux home closures that
+      # this flake exports for the lab servers. This repo owns no NixOS
+      # *system* config -- oppy/spirit/karkinos belong to runxi-shen/neusis,
+      # which consumes homeModules.rshen from here.
       linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
       # Apple Silicon only. nixpkgs 26.11 dropped x86_64-darwin, so keeping it
-      # here manufactures a darwinConfiguration that cannot evaluate and fails
-      # `nix flake check` -- for a machine that does not exist.
+      # here manufactures a darwinConfiguration that cannot evaluate -- for a
+      # machine that does not exist.
       darwinSystems = [ "aarch64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs (linuxSystems ++ darwinSystems) f;
       devShell = system: let pkgs = nixpkgs.legacyPackages.${system}; in {
@@ -99,22 +83,15 @@
       };
     in
     {
-      templates = {
-        starter = {
-          path = ./templates/starter;
-          description = "Starter configuration without secrets";
-        };
-        starter-with-secrets = {
-          path = ./templates/starter-with-secrets;
-          description = "Starter configuration with secrets";
-        };
-      };
+      # Named overlays, so an individual one stays addressable by a consuming
+      # flake. See overlays/default.nix.
+      overlays = import ./overlays { inherit inputs outputs; };
       devShells = forAllSystems devShell;
       apps = nixpkgs.lib.genAttrs linuxSystems mkLinuxApps // nixpkgs.lib.genAttrs darwinSystems mkDarwinApps;
       darwinConfigurations = nixpkgs.lib.genAttrs darwinSystems (system:
         darwin.lib.darwinSystem {
           inherit system;
-          specialArgs = inputs // { inherit user; };
+          specialArgs = inputs // { inherit user outputs; };
           modules = [
             home-manager.darwinModules.home-manager
             nix-homebrew.darwinModules.nix-homebrew
@@ -139,50 +116,5 @@
           ];
         }
       );
-      nixosConfigurations = 
-        # Platform-based configurations (current behavior)
-        nixpkgs.lib.genAttrs linuxSystems (system:
-          nixpkgs.lib.nixosSystem {
-            inherit system;
-            specialArgs = inputs // { inherit user; };
-            modules = [
-              disko.nixosModules.disko
-              chaotic.nixosModules.default
-              home-manager.nixosModules.home-manager {
-                home-manager = {
-                  sharedModules = [ plasma-manager.homeModules.plasma-manager ]; 
-                  useGlobalPkgs = true;
-                  useUserPackages = true;
-                  users.${user} = { config, pkgs, lib, ... }:
-                    import ./modules/nixos/home-manager.nix { inherit config pkgs lib inputs; };
-                };
-              }
-              ./hosts/nixos
-            ];
-          }
-        )
-        
-        // # Named host configurations
-        
-        {
-          garfield = nixpkgs.lib.nixosSystem {
-            system = "x86_64-linux";
-            specialArgs = inputs // { inherit user; };
-            modules = [
-              disko.nixosModules.disko
-              chaotic.nixosModules.default
-              home-manager.nixosModules.home-manager {
-                home-manager = {
-                  sharedModules = [ plasma-manager.homeModules.plasma-manager ];
-                  useGlobalPkgs = true;
-                  useUserPackages = true;
-                  users.${user} = { config, pkgs, lib, ... }:
-                    import ./modules/nixos/home-manager.nix { inherit config pkgs lib inputs; };
-                };
-              }
-              ./hosts/nixos/garfield
-            ];
-          };
-        };
     };
 }

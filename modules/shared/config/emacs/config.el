@@ -70,8 +70,11 @@
 
 ;; Set path for darwin
 (when (system-is-mac)
-  (setenv "PATH" (concat (getenv "PATH") ":/Users/dustin/.nix-profile/bin:/usr/bin"))
-  (setq exec-path (append '("/Users/dustin/bin" "/profile/bin" "/Users/dustin/.npm-packages/bin" "/Users/dustin/.nix-profile/bin" "/nix/var/nix/profiles/default/bin" "/usr/local/bin" "/usr/bin") exec-path)))
+  (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name "~/.nix-profile/bin") ":/usr/bin"))
+  (setq exec-path (append (mapcar #'expand-file-name
+                                  '("~/bin" "~/.npm-packages/bin" "~/.nix-profile/bin"))
+                          '("/profile/bin" "/nix/var/nix/profiles/default/bin" "/usr/local/bin" "/usr/bin")
+                          exec-path)))
 
 (use-package counsel
   :demand t
