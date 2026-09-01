@@ -320,10 +320,24 @@ builds. (Cross-building the Linux closure is gated on Phase 4's outputs existing
   `hosts/darwin/default.nix` and again in `home.packages` via `modules/darwin/packages.nix`.
   Verified package-neutral by evaluating the union of both option sets before and after:
   **77 derivations → 77, zero lost, zero gained.**
+
+  **That claim covers PATH and closure contents only — not `/Applications` placement.**
+  Emptying `environment.systemPackages` also empties `system.build.applications`
+  (`f4yasiyp…` contained `Zed.app`; `k60ncfwy…` is empty), and nix-darwin's activate script
+  rsyncs that into `/Applications/Nix Apps` with `--archive --delete`. See the Phase 3
+  carry-forward.
 - **Emacs stack deleted** (`modules/shared/emacs.nix`, `config/emacs/{config.org,config.el,
   init.el}`), resolving the Phase 1 carry-forward. No importer survived Phase 1, no `.nix`
-  deployed `config.el`, emacs is in no package list, and all 55 commits touching it are the
-  upstream owner's. `modules/shared/cachix/` is still unreferenced — left for Phase 6.
+  deployed `config.el`, and emacs is in no package list. **Authorship, corrected:** 58
+  commits touch it, not 55 — 55 Dustin Lyons, 2 from this migration itself (`2d2c07f6`,
+  `8d72fb0d`), and 1 from an outside upstream PR (`58db206b`, Kristian Hartikainen).
+  `8d72fb0d`'s commit message says "all 55 commits … are the upstream owner's", which
+  undercounts and misattributes; the conclusion is unaffected — none of the deleted content
+  is this repo owner's own work. `modules/shared/cachix/` is still unreferenced — Phase 6.
+- **Two small departures from the phase's stated package split**, both deliberate: `btop`
+  went to the portable `homes/rshen/packages.nix` rather than `machines/*.nix` (it is useful
+  everywhere), and `procps` was added to `machines/oppy.nix` to supply the `ps` that neusis
+  lists — `ps` is not a nixpkgs attribute.
 - **The grep guard must stay literal.** Comments in `homes/` that quoted the forbidden
   strings tripped the invariant check. Reworded; do not reintroduce them, or the guard
   stops guarding.
@@ -368,6 +382,24 @@ argument — so renaming this machine to `rshen` later is editing that string.
   *is* the "same settings on all Macs" requirement.
 - Rewrite `apps/*/build-switch` to resolve at runtime:
   `HOST=$(scutil --get LocalHostName)` → `.#darwinConfigurations.$HOST.system`.
+
+**Carried forward from Phase 2 verification — decide BEFORE running `build-switch`**
+
+Phase 2 reduced `environment.systemPackages` to agenix alone, which empties
+`system.build.applications`. nix-darwin's activate script rsyncs that into
+`/Applications/Nix Apps` with `--archive --delete`, so **the first `build-switch` after
+Phase 2 deletes the live `/Applications/Nix Apps/Zed.app`** (310 MB, present now).
+
+Narrow but user-visible. Zed stays installed, on PATH, and at
+`~/Applications/Home Manager Apps/Zed.app` — but that is a symlink into `/nix/store`, which
+Spotlight does not index (`mdfind -name Alacritty.app` returns nothing, same mechanism), so
+`mdfind kMDItemCFBundleIdentifier == 'dev.zed.Zed'` currently returns **only** the doomed
+path. No dock entry references it. Either accept explicitly, or add `pkgs.zed-editor` back
+to Darwin `environment.systemPackages`.
+
+Add an app-bundle check to the Verify list below — `ls '/Applications/Nix Apps'` plus an
+`mdfind` for the editor bundle id. None of the existing post-switch checks would notice a
+GUI bundle disappearing.
 
 **Carried forward from Phase 1 verification — widen the `apps/` scope**
 
@@ -430,6 +462,19 @@ homeConfigurations."rshen@oppy" = lib.homeManagerConfiguration {
 Baking `_module.args` and `nixpkgs` *into* the module is deliberate, copied from Alan's
 comment in `afermg/nixos-config`: a consumer's `extraSpecialArgs` would otherwise shadow
 this flake's `outputs`.
+
+**Carried forward from Phase 2 verification**
+
+- **`useGlobalPkgs` conflict.** `modules/darwin/home-manager.nix:50` sets
+  `useGlobalPkgs = true`, under which home-manager warns — and eventually asserts — if
+  `nixpkgs.config` or `nixpkgs.overlays` are defined. The `homeModules.rshen` snippet below
+  bakes in both. Keep them in the **export wrapper only, never inside `homes/rshen/`**, or
+  every Mac rebuild starts warning.
+- **git identity will collide.** neusis's `common/dev/git.nix` sets `programs.git` user
+  identity for `rshen` directly. That is a *plain* definition, as is
+  `homes/rshen/core.nix`'s — two plain definitions conflict at eval. The new
+  `rshen.gitUserEmail` option only helps once neusis stops setting identity itself, which is
+  Phase 5's job.
 
 **Decide: all overlays, or just `claude-code`?** The snippet above applies only
 `outputs.overlays.claude-code`, whereas `modules/shared/default.nix` applies
