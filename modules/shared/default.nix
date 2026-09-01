@@ -14,7 +14,7 @@
 
     # Every named overlay from overlays/default.nix. Named rather than
     # directory-scanned so that a single overlay stays addressable as
-    # `outputs.overlays.<name>` for consumers of `homeModules.rshen`.
+    # `outputs.overlays.<name>` by a consuming flake.
     overlays = builtins.attrValues outputs.overlays;
   };
 }

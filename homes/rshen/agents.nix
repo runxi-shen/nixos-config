@@ -28,9 +28,13 @@ let
 
   # legacyPackages, not `import rshenInputs.nixpkgs { ... }`: it is the cached
   # instantiation, so this costs an attribute lookup rather than a second full
-  # nixpkgs evaluation. None of these three are unfree today; if one ever
-  # becomes unfree this must switch to an explicit import with allowUnfree,
-  # because legacyPackages carries no nixpkgs.config.
+  # nixpkgs evaluation.
+  #
+  # It carries NO nixpkgs.config, so nothing unfree may be taken from it. codex
+  # and pi-coding-agent are both free. claude-code is NOT -- which is precisely
+  # why it is taken from the claude-code flake input below instead. Do not
+  # "simplify" that to `ourPkgs.claude-code`: it would fail on any consumer
+  # without allowUnfree.
   ourPkgs = rshenInputs.nixpkgs.legacyPackages.${system};
 in
 {

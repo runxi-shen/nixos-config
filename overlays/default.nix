@@ -3,7 +3,7 @@
 # Deliberately NOT the directory-scanning auto-loader this repo used to carry.
 # That loader mapped every *.nix in this directory into an anonymous list, so an
 # individual overlay could not be referenced from anywhere else -- and
-# `homeModules.rshen` has to hand one specific overlay to a *consuming* flake
+# an exported homeModule may have to hand one specific overlay to a *consuming* flake
 # (neusis), which requires it to have a name.
 #
 # Pattern taken from afermg/nixos-config's overlays/default.nix.

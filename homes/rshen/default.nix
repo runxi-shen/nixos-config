@@ -1,6 +1,8 @@
 # THE portable profile. Imported by:
 #   - this flake's Macs, via modules/darwin/home-manager.nix
-#   - `homeModules.rshen`, which runxi-shen/neusis consumes for the lab servers
+#   - the lab servers, but ONLY via ./agents.nix, exported as homeModules.rshen-agents.
+#     The rest of this profile is NOT exported -- neusis configures rshen well
+#     already, and core.nix would collide with its homes/common/dev/git.nix.
 #
 # Invariant: nothing under homes/ may name a concrete username or an absolute
 # home path. `home.username` and `home.homeDirectory` are supplied by the

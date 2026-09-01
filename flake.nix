@@ -35,7 +35,7 @@
       # Kept for devShells and the Linux home closures this flake exports for
       # the lab servers. This repo owns no NixOS *system* config --
       # oppy/spirit/karkinos belong to runxi-shen/neusis, which consumes
-      # homeModules.rshen from here. There are deliberately no Linux `apps`:
+      # homeModules.rshen-agents from here. There are deliberately no Linux `apps`:
       # every one of them drove the nixosConfigurations that Phase 1 removed.
       linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
       # Apple Silicon only. nixpkgs 26.11 dropped x86_64-darwin, so keeping it
@@ -133,9 +133,11 @@
         modules = [
           outputs.homeModules.rshen-agents
           {
-            home.username = "rshen";
-            home.homeDirectory = "/home/rshen";
-            home.stateVersion = "25.11"; # matches neusis homes/common/home_manager.nix
+            home = {
+              username = "rshen";
+              homeDirectory = "/home/rshen";
+              stateVersion = "25.11"; # matches neusis homes/common/home_manager.nix
+            };
           }
         ];
       };
