@@ -18,7 +18,8 @@ let
 in
 {
   home.packages = with pkgs; [
-    claude-code # Anthropic Claude Code CLI (declarative via the claude-code overlay)
+    # claude-code, codex and pi-coding-agent live in ./agents.nix -- they are
+    # pinned to this flake's own inputs so the export stays version-stable.
     direnv # Environment variable management per directory
     gcc # GNU Compiler Collection
     gh # GitHub CLI

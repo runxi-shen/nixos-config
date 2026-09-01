@@ -1,6 +1,6 @@
 # Shared across every Mac. `user` comes from mkDarwin's specialArgs; per-host
 # content (casks, dock entries, cloud links) lives in hosts/darwin/<host>.nix.
-{ config, pkgs, lib, home-manager, user, ... }:
+{ config, pkgs, lib, home-manager, user, inputs, ... }:
 
 let
   sharedFiles     = import ../shared/files.nix { inherit config pkgs; };
@@ -50,6 +50,11 @@ in
   home-manager = {
     useGlobalPkgs = true;
     backupFileExtension = "backup";
+    # `rshenInputs` mirrors what homeModules.rshen-agents injects on the server
+    # side, so homes/rshen/agents.nix resolves the same way on both. Namespaced
+    # for the same reason afermg namespaces `amunozInputs`: a consuming flake's
+    # generic `inputs` must not be able to shadow this flake's package pins.
+    extraSpecialArgs = { inherit inputs; rshenInputs = inputs; };
     users.${user} = { pkgs, lib, ... }: {
       # The portable profile. nix-darwin has already set home.username and
       # home.homeDirectory from `users.users.${user}` above, and a plain

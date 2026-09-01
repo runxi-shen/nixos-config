@@ -508,74 +508,116 @@ working network completes it.
 
 ---
 
-## Phase 4 — Export for the servers — status: TODO
+## Phase 4 — Export the agents module — status: DONE (pending commit)
 
-**Goal:** make the profile consumable by another flake.
+**Scope changed at execution time.** This phase originally exported the *whole* home
+profile (`homeModules.rshen` = all of `homes/rshen`) and Phase 5 shrank neusis's
+`homes/rshen/machines/<host>.nix` to a single import of it. The owner rejected that:
+
+> "definitely NO NEED to replicate my whole Mac config over there, but keep the installed
+> software there minimal for my user is totally fine. What I have configured in my neusis
+> for my user `rshen` across machines are good enough, but I just need pi and also codex to
+> be installed and configured into nix config properly."
+
+and separately, as a standing constraint:
+
+> "I ONLY touch my own home config customized for myself on those machines, NEVER the
+> system-level shared config, a crucial thing."
+
+The **ownership model is still Alan's** — nixos-config owns the profile, neusis imports it —
+but it is reached **incrementally** rather than in one jump. Step one exports only what
+neusis genuinely cannot supply. Modules migrate here later, one at a time, each deleting its
+corresponding neusis import as its replacement lands, until
+`neusis/homes/rshen/machines/oppy.nix` is a single import like
+`afermg/homes/amunoz/machines/oppy.nix`.
+
+**Ownership boundary in neusis** (verified against the live repo — fifteen user homes exist):
+
+| path | ownership | rule |
+|---|---|---|
+| `homes/rshen/**` | Runxi alone | safe to change |
+| `homes/common/**` | **shared by all fifteen users** | never edit; dropping *imports* of it from `homes/rshen/**` affects nobody |
+| `machines/**`, `users/cslab*.nix` | system-level, shared | never touch |
+| `flake.nix` | shared | one input line only — precedented by Alan's `amunoz-nixos-config` |
 
 **Changes**
 
-```nix
-# mirrors afermg/nixos-config's homeModules.amunoz
-homeModules.rshen = {
-  _module.args = { inherit inputs outputs; };   # so a consumer's specialArgs can't shadow ours
-  imports = [ agenix.homeManagerModules.default ./homes/rshen ];
-  nixpkgs = { config.allowUnfree = true; overlays = [ outputs.overlays.claude-code ]; };
-};
-homeModules.rshen-oppy = { imports = [ homeModules.rshen ./homes/rshen/machines/oppy.nix ]; };
-# …-spirit, …-karkinos
+- `homes/rshen/agents.nix` — `claude-code`, `codex`, `pi-coding-agent`, each sourced from
+  **this flake's own inputs** rather than the consumer's `pkgs`.
+- `flake.nix` — `homeModules.rshen-agents` wrapping it, plus
+  `homeConfigurations."rshen@oppy"` as an evaluation gate, plus `inputs` added to the darwin
+  `specialArgs` and `extraSpecialArgs` so the Mac resolves the module identically.
+- Deleted `homes/rshen/machines/{oppy,spirit,karkinos}.nix` — dead. They held duckdb,
+  poetry, pixi, gitleaks, btop, screen, cmake, rsync, which neusis already installs.
+- Removed `codex`/`pi-coding-agent` from `modules/darwin/packages.nix` and `claude-code`
+  from `homes/rshen/dev.nix`; `agents.nix` is now the single definition for both platforms.
 
-homeConfigurations."rshen@oppy" = lib.homeManagerConfiguration {
-  pkgs = pkgsFor.x86_64-linux;
-  modules = [ outputs.homeModules.rshen-oppy
-              { home.username = "rshen"; home.homeDirectory = "/home/rshen"; } ];
-};
+**Why the packages come from our inputs, not the consumer's `pkgs`**
+
+neusis pins nixpkgs at `36a601196c4e` (2026-04-04). Measured against it:
+
+| package | neusis pin | this repo's pin (2026-07-19) |
+|---|---|---|
+| `pi-coding-agent` | **absent entirely** | 0.80.10 |
+| `codex` | 0.92.0 | 0.144.4 |
+
+Bumping neusis's nixpkgs would rebuild shared machines for fifteen people and is not ours to
+do. So this copies `afermg/nixos-config`'s `homes/amunoz/packages.nix`, which hit the
+identical problem with the identical package:
+
+```nix
+latestPiCodingAgent =
+  inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.pi-coding-agent;
 ```
 
-Baking `_module.args` and `nixpkgs` *into* the module is deliberate, copied from Alan's
-comment in `afermg/nixos-config`: a consumer's `extraSpecialArgs` would otherwise shadow
-this flake's `outputs`.
+`rshenInputs ? inputs` (not plain `inputs`) is what makes it hold: a consuming flake passes
+its own `inputs` through `extraSpecialArgs`, which would shadow ours and silently undo the
+pinning. `homeModules.rshen-agents` sets `_module.args.rshenInputs = inputs`.
 
-**Carried forward from Phase 2 verification**
+**A `pi` naming trap, resolved.** neusis already has an `llm-agents` input exposing a package
+called `pi` (0.65.2, `badlogic/pi-mono`), which looks like a zero-new-input fix. It is the
+**same upstream project** — `badlogic/pi-mono` and `earendil-works/pi` are one repository,
+GitHub id `1035029907`, the old path being a transfer redirect — just older and packaged
+from the monorepo rather than the coding-agent subpackage. Using `pi-coding-agent` from our
+pin is the deliberate choice; an earlier note in this document claiming they were *different
+tools* was wrong.
 
-- **`useGlobalPkgs` conflict.** `modules/darwin/home-manager.nix:50` sets
-  `useGlobalPkgs = true`, under which home-manager warns — and eventually asserts — if
-  `nixpkgs.config` or `nixpkgs.overlays` are defined. The `homeModules.rshen` snippet below
-  bakes in both. Keep them in the **export wrapper only, never inside `homes/rshen/`**, or
-  every Mac rebuild starts warning.
-- **git identity will collide.** neusis's `common/dev/git.nix` sets `programs.git` user
-  identity for `rshen` directly. That is a *plain* definition, as is
-  `homes/rshen/core.nix`'s — two plain definitions conflict at eval. The new
-  `rshen.gitUserEmail` option only helps once neusis stops setting identity itself, which is
-  Phase 5's job.
+**Deliberately NOT exported:** `homes/rshen/core.nix`. It sets `programs.git`, and so does
+neusis's `homes/common/dev/git.nix` (identity, SSH commit signing, the Broad address) — two
+plain definitions collide at eval. The `rshen.gitUserEmail` option added in Phase 2 only
+becomes useful if git ownership ever migrates here.
 
-**Decide: all overlays, or just `claude-code`?** The snippet above applies only
-`outputs.overlays.claude-code`, whereas `modules/shared/default.nix` applies
-`builtins.attrValues outputs.overlays`. Left as-is, server `pkgs` would silently diverge
-from Mac `pkgs`. Pick one deliberately.
-
-**Prerequisite already landed in Phase 1.** `outputs.overlays.claude-code` did not exist
-when this phase was written — `overlays/` was an anonymous directory scan. Phase 1 replaced
-it with named overlays exported as `outputs.overlays`, so the snippet above now resolves.
-Note also that afermg goes further than `_module.args` alone: `homes/amunoz/home.nix` takes
-a **namespaced** `amunozInputs ? inputs` argument so a consumer's generic `inputs` cannot
-shadow this flake's package pins. Consider `rshenInputs` here.
+**Resolves the Phase 2 carry-forwards:** no `nixpkgs.config` or `nixpkgs.overlays` is set in
+the export (neusis sets both in `homes/common/home_manager.nix`, and every package comes
+from our inputs), so the `useGlobalPkgs` warning cannot arise. The "all overlays or just
+claude-code?" question is moot for the same reason.
 
 **Verify**
 
 ```bash
 nix flake check
-# THE key gate — cross-build the Linux home closure locally, no server involved.
-# Fails loudly on any surviving /Users/… path or Darwin-only package.
-nix build .#homeConfigurations."rshen@oppy".activationPackage
-nix build .#homeConfigurations."rshen@spirit".activationPackage
-nix build .#homeConfigurations."rshen@karkinos".activationPackage
+# THE gate -- EVALUATE, do not build (see below).
+nix eval --raw '.#homeConfigurations."rshen@oppy".activationPackage.drvPath'
+nix eval --json '.#homeConfigurations."rshen@oppy".config.home.packages' \
+  --apply 'ps: map (p: p.name) ps'
 nix run .#build     # Mac unaffected
 ```
 
-**Exit criteria:** all three Linux activation packages build on this Mac; `nix run .#build`
-still passes.
+**The plan's original gate was impossible.** It said
+`nix build .#homeConfigurations."rshen@oppy".activationPackage`. That cannot succeed on a
+Mac: most of the closure substitutes from cache, but home-manager generates a few trivial
+x86_64-linux derivations (`dummy-xdg-mime-dirs1`, `hm_home...keep`) that exist in no binary
+cache and must be built natively — the build dies with `required system or feature not
+available` regardless of how healthy the config is. Forcing `.drvPath` evaluates the whole
+module tree, which is where this phase's class of bug lives. `nix.linux-builder.enable` would
+enable a genuine cross-build if ever wanted.
 
-**Commit:** `Export homeModules.rshen and per-host homeConfigurations`
+**Exit criteria met:** the Linux closure evaluates and resolves `codex-0.144.4`,
+`pi-coding-agent-0.80.10`, `claude-code-2.1.220` for x86_64-linux; `nix flake check` exits 0;
+`nix run .#build` exits 0; the Mac's `home.packages` set is unchanged at 66 derivations,
+zero lost and zero gained.
+
+**Commit:** `Export homeModules.rshen-agents for the lab servers`
 
 ---
 
@@ -583,18 +625,41 @@ still passes.
 
 **Separate repo. Land as a PR — this rebuilds machines other people use.**
 
-**Changes in `runxi-shen/neusis`**
+**Scope reduced.** The original phase deleted `homes/rshen/home.nix`, dropped the
+`claude-code-rshen` input, and shrank each `homes/rshen/machines/<host>.nix` to one import.
+That would have discarded all eleven `homes/common/` imports rshen currently relies on:
 
-1. Add input `rshen-nixos-config = { url = "github:runxi-shen/nixos-config"; };`
-2. Shrink each `homes/rshen/machines/<host>.nix` to one import of
-   `inputs.rshen-nixos-config.homeModules."rshen-<host>"`.
-3. Delete `homes/rshen/home.nix` and the `claude-code-rshen` input (verified live at
-   `fa3dded`; referenced only by that file; this repo's `claude-code` input replaces it).
-   Its packages — duckdb, poetry, pixi, gitleaks, btop, screen, cmake, rsync — move to
-   `homes/rshen/machines/*.nix` here in Phase 2. The input also exists in upstream
-   `shntnu/neusis`, so expect a conflict on the next upstream merge.
-4. Leave `users/cslab*.nix` alone. Account, shell, and SSH key stay in neusis — correct for
-   a shared machine.
+| import | provides |
+|---|---|
+| `common/home_manager.nix` | overlays, allowUnfree, `stateVersion = "25.11"` |
+| `common/dev/` | editors.nix, nixvim, terminals, zellij, wezterm, yazi, kalam |
+| `common/dev/git.nix` | identity + SSH commit signing, Broad address |
+| `common/themes/` | stylix theming |
+| `common/browsers/` | brave (+ policy), firefox |
+| `common/network/` | tailscale |
+| `common/misc/` | conferencing, input_leap, us_eng, virtualization |
+| `common/secrets/` | tsauthkey |
+| `common/gpu_tools.nix` | nvitop |
+
+The owner keeps all of it. This phase is now **additive**.
+
+**Changes in `runxi-shen/neusis`** — three lines, two files under `homes/rshen/**` plus one
+shared-file input line:
+
+1. `flake.nix`: add
+   `rshen-nixos-config = { url = "github:runxi-shen/nixos-config"; };`
+2. `homes/rshen/machines/oppy.nix`: append
+   `inputs.rshen-nixos-config.homeModules.rshen-agents` to the existing `imports` list,
+   leaving all eleven `common/` imports untouched. `spirit.nix` and `karkinos.nix` already
+   import `oppy.nix`, so they inherit it for free.
+3. `homes/rshen/home.nix`: **remove** the
+   `inputs.claude-code-rshen.packages.${system}.claude-code` line. Both it and our module
+   provide `bin/claude`, and two derivations claiming the same path make `home.packages`
+   fail with a collision. Leave the now-unused `claude-code-rshen` input in `flake.nix`
+   alone — removing it is a shared-file edit with no benefit.
+4. Leave `users/cslab*.nix` and everything under `machines/` alone. Account, shell and SSH
+   key stay in neusis — correct for a shared machine, and outside the owner's boundary.
+5. **Do not touch `homes/common/**`.** It is shared by fifteen users.
 
 **Verify**
 
@@ -605,18 +670,33 @@ nix build .#nixosConfigurations.spirit.config.system.build.toplevel
 nix build .#nixosConfigurations.karkinos.config.system.build.toplevel
 ```
 
+Run these **on a Linux machine** — the same "required system or feature not available"
+limitation that reshaped Phase 4's gate applies here, and these are full system closures.
+
+**Watch for:** a second nixpkgs generation landing on the servers. Our three agents come
+from a 2026-07-19 pin while everything else on the box comes from neusis's 2026-04-04 pin,
+so some runtime dependencies will be duplicated. `nix build --dry-run` on the exported
+closure reported 209 paths / 625 MiB to fetch, though much of that will already exist from
+neusis's own profile. Measure real disk impact on oppy before assuming it is free.
+
 **Exit criteria:** all three system closures build; PR opened; no changes outside
-`homes/rshen/**` and the two `flake.nix` input lines.
+`homes/rshen/**` and the one `flake.nix` input line.
 
 **Ongoing cadence after this:** change lands here → in neusis,
 `nix flake update rshen-nixos-config` → rebuild. `homeConfigurations."rshen@oppy"` is for
-`nix build` iteration only — **do not routinely `home-manager switch` it alongside neusis's
-system-applied profile.** System-applied home-manager writes its generation to
-`/nix/var/nix/profiles/per-user/…`, standalone to
+`nix eval`/`nix build` iteration only — **do not routinely `home-manager switch` it
+alongside neusis's system-applied profile.** System-applied home-manager writes its
+generation to `/nix/var/nix/profiles/per-user/…`, standalone to
 `~/.local/state/nix/profiles/home-manager`; both claiming `~/.config` will clobber each
 other's symlinks.
 
-**Commit:** `Source rshen home profile from runxi-shen/nixos-config`
+**Migrating further later.** To move a capability from neusis to here: add the equivalent
+module under `homes/rshen/`, export it as another `homeModules.rshen-*`, import it in
+`homes/rshen/machines/oppy.nix`, delete the corresponding `common/` import in the same
+commit, and rebuild. One capability per PR keeps each step revertible. `programs.git` is the
+one to do carefully — see the collision note in Phase 4.
+
+**Commit:** `Source rshen's coding agents from runxi-shen/nixos-config`
 
 ---
 

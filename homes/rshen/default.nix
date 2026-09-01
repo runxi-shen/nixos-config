@@ -14,6 +14,10 @@
     ./core.nix
     ./packages.nix
     ./dev.nix
+    # Also exported on its own as homeModules.rshen-agents, which is what the
+    # lab servers import. Kept as a separate file so this Mac and those servers
+    # share one definition of "which coding agents I run".
+    ./agents.nix
     # Imported unconditionally and gated internally with mkIf, NOT via
     # `lib.optional pkgs.stdenv.hostPlatform.isDarwin`. `pkgs` reaches a module
     # through `_module.args`, which is part of `config`, and `imports` is

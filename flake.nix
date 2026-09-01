@@ -79,6 +79,67 @@
       # Named overlays, so an individual one stays addressable by a consuming
       # flake. See overlays/default.nix.
       overlays = import ./overlays { inherit inputs outputs; };
+
+      # Exported for runxi-shen/neusis, which manages the `rshen` account on the
+      # shared lab machines oppy/spirit/karkinos.
+      #
+      # Deliberately NARROW. neusis already configures that account well -- git
+      # identity and signing, editors, themes, browsers, tailscale, GPU tools --
+      # from its own homes/common/, which is shared by fifteen users. This
+      # exports only what neusis's nixpkgs pin (2026-04-04) genuinely cannot
+      # supply, and nothing else. In particular it does NOT pull in
+      # homes/rshen/core.nix: that sets `programs.git`, and so does neusis's
+      # homes/common/dev/git.nix -- two plain definitions would collide at eval.
+      #
+      # Ownership can migrate here one module at a time later, deleting the
+      # corresponding neusis import as each replacement lands, until
+      # neusis/homes/rshen/machines/oppy.nix is a single import like
+      # afermg's homes/amunoz/machines/oppy.nix. This is step one of that path,
+      # not a one-shot replacement.
+      homeModules.rshen-agents = {
+        # Namespaced so a consumer's extraSpecialArgs cannot shadow our pins;
+        # see the comment in homes/rshen/agents.nix.
+        _module.args = {
+          inherit inputs outputs;
+          rshenInputs = inputs;
+        };
+        imports = [ ./homes/rshen/agents.nix ];
+        # No `nixpkgs.config` or `nixpkgs.overlays` here on purpose: neusis sets
+        # both in homes/common/home_manager.nix, and every package this module
+        # installs comes from our own inputs rather than the consumer's pkgs.
+      };
+      # Evaluation gate for the exported module: it catches a Darwin-only
+      # package, a missing attribute, or a module error on the servers' platform
+      # BEFORE a PR touches machines that fifteen people share.
+      #
+      #   nix eval --raw '.#homeConfigurations."rshen@oppy".activationPackage.drvPath'
+      #
+      # EVALUATE, do not build. `nix build` of this cannot work on a Mac:
+      # home-manager generates a handful of trivial x86_64-linux derivations
+      # (dummy-xdg-mime-dirs, hm_home...keep) that exist in no binary cache and
+      # must be built natively, so the build dies with "required system or
+      # feature not available" no matter how healthy the config is. Forcing
+      # .drvPath evaluates the entire module tree, which is where our class of
+      # bug lives. Add `nix.linux-builder.enable = true` if a real cross-build
+      # is ever wanted.
+      #
+      # NOT for `home-manager switch`. neusis applies rshen's home profile at
+      # system rebuild, writing its generation under
+      # /nix/var/nix/profiles/per-user; a standalone switch writes to
+      # ~/.local/state/nix/profiles/home-manager. Both would claim ~/.config and
+      # clobber each other's symlinks. Use this with `nix build` only.
+      homeConfigurations."rshen@oppy" = home-manager.lib.homeManagerConfiguration {
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        modules = [
+          outputs.homeModules.rshen-agents
+          {
+            home.username = "rshen";
+            home.homeDirectory = "/home/rshen";
+            home.stateVersion = "25.11"; # matches neusis homes/common/home_manager.nix
+          }
+        ];
+      };
+
       devShells = forAllSystems devShell;
       apps = nixpkgs.lib.genAttrs darwinSystems mkDarwinApps;
 
@@ -96,7 +157,10 @@
         let
           mkDarwin = { host, user }: darwin.lib.darwinSystem {
             system = "aarch64-darwin";
-            specialArgs = inputs // { inherit user host outputs; };
+            # `inputs` is passed as a whole attrset in addition to being spread,
+            # so modules can forward it to home-manager's extraSpecialArgs --
+            # homes/rshen/agents.nix needs it to pin agents to this flake.
+            specialArgs = inputs // { inherit user host outputs inputs; };
             modules = [
               home-manager.darwinModules.home-manager
               nix-homebrew.darwinModules.nix-homebrew
