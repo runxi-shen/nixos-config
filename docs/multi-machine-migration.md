@@ -453,8 +453,19 @@ hardcoded system; post-switch checks above all pass.
   it `sed`-replaced `%USER%` tokens across *every file in the tree*, spliced `flake.nix`
   against the `disko` anchor Phase 1 removed (so it would now truncate the flake), and opened
   the upstream repo to ask for a star. Running it on a configured machine would corrupt the
-  config. `build`, `build-switch` and `rollback` now resolve the host at runtime and accept
-  an explicit override; `build-switch` fails with the known-host list *before* reaching sudo.
+  config. `build` and `build-switch` now resolve the host at runtime and accept an explicit
+  override; `build-switch` fails with the known-host list *before* reaching sudo.
+- **`rollback` was broken and is now fixed** (found by verification, pre-existing upstream).
+  It called `darwin-rebuild --list-generations` unprivileged, which dies on the root-owned
+  system-profile lock — and under `sh -e` the script exited before even reaching the prompt.
+  Both calls now use `sudo`. The `--flake .#<host>` it used to pass was inert: a generation
+  switch reads `systemConfig` back out of the profile. This matters because `CLAUDE.md`
+  names `nix run .#rollback` as *the* recovery path for a bad rebuild.
+- **`build-switch`'s host precheck was a regression**, also found by verification. It ran a
+  full closure evaluation with `>/dev/null 2>&1` and reported *any* failure as "unknown
+  host" — including this repo's most-documented footgun, a new file not yet `git add`ed.
+  Replaced with a membership test over `builtins.attrNames`; real errors now propagate
+  verbatim, and `set -e` still guarantees the abort-before-sudo property.
 
 **Proof it was a pure refactor:** the new system derivation has byte-identical `inputDrvs`
 to the pre-phase one and an identical `home-files` list. The sole textual delta in the whole
@@ -467,9 +478,33 @@ the store hop to the real cloud directories; the OneDrive tombstone is still 0-b
 `/Applications/Nix Apps/` is now empty and `mdfind` finds no Zed — the owner accepted this
 before the switch.
 
-**Note for a second Mac:** `hosts/darwin/runxi-mbp.nix` calls
-`modules/darwin/casks.nix`, which is therefore now effectively *this host's* cask list
-despite living under `modules/`. A second host should get its own list rather than share it.
+**Notes for when the second Mac is registered** (from verification):
+
+- `hosts/darwin/runxi-mbp.nix` calls `modules/darwin/casks.nix`, which is therefore now
+  effectively *this host's* cask list despite living under `modules/`. A second host should
+  get its own list rather than share it.
+- **`local.dock.entries` silently defaults to `[]`.** `types.listOf` supplies an
+  `emptyValue`, so a host file that omits the dock block does **not** fail to evaluate — and
+  because `modules/darwin/home-manager.nix` sets `local.dock.enable = true`
+  unconditionally, the new Mac's dock would be *emptied* by `dockutil --remove all`. Copy
+  the dock block from `runxi-mbp.nix`, or add an assertion. (An earlier note here claimed
+  the missing default would error; that was wrong.)
+- `nix.enable = false` sits in the shared `hosts/darwin/default.nix` but is a fact about
+  *this* Mac running Determinate Nix, and it silently voids the `nix.settings` block beside
+  it — `/run/current-system/etc` has no `nix.conf`. Misleading for a Mac installed with the
+  upstream installer.
+- The `dsh` wrapper stayed in the Mac-shared `modules/darwin/packages.nix` even though the
+  `dsh-web` agent it pairs with moved host-side. It degrades gracefully (exit 1 with a
+  reinstall hint), but the pair should end up on the same side.
+- Nothing declaratively sets the machine name, so the flake key stays coupled to imperative
+  `scutil` state. `networking.localHostName = host;` would make the canonical key
+  self-enforcing and retire the alias — declined here only because the plan chose not to
+  rename this Mac.
+
+**Activation ordering caveat:** the nix-darwin activate script is `set -e` and `brew bundle`
+runs *before* home-manager activation. A failed cask download aborts the switch with the
+system profile already advanced and HM not yet activated. Re-running `build-switch` on a
+working network completes it.
 
 ---
 
@@ -604,8 +639,14 @@ Only after Phases 0–5 verify.
   `.#build-switch-emacs` — plus a Wayland/KDE "System Environment" section describing a
   machine this repo no longer has. `overlays/README.md:3` repeats the auto-load claim and
   lists nine deleted overlays. `README.md` is still upstream's project README verbatim
-  (`:384` links the deleted `modules/nixos/README.md`). Sweep all four at once, against the
-  final tree — Phases 2-4 will invalidate more of `CLAUDE.md` first.
+  (`:384` links the deleted `modules/nixos/README.md`). Also `apps/README.md` (names the
+  three deleted app sets), `modules/shared/README.md` (lists two files deleted in Phase 2)
+  and `modules/darwin/README.md` (lists a `modules/darwin/default.nix` that has never
+  existed). Sweep all at once, against the final tree — Phases 2-4 invalidate more first.
+- Refresh the **Target structure** sketch above: it still lists `codex` under
+  `homes/rshen/dev.nix`, but `codex` and `pi-coding-agent` moved to
+  `modules/darwin/packages.nix` (Mac-only) in `8abee7d9`, and `gui.nix` is imported
+  unconditionally rather than "Macs only".
 - Drop the stale `.gitignore` entries `modules/nixos/scripts/__pycache__/` and
   `tests/garage-analyzer/__pycache__/`.
 - Delete `backup/personalize-pre-rebase-2026-08-22`.

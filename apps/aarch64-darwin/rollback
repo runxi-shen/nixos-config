@@ -5,11 +5,18 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
-# See ./build-switch for why the host is resolved at runtime.
-FLAKE="${1:-$(scutil --get LocalHostName)}"
+# Both darwin-rebuild calls need sudo. The system profile under
+# /nix/var/nix/profiles is root-owned, so an unprivileged --list-generations
+# dies on the profile lock ("opening lock file ...: Permission denied") and,
+# under `sh -e`, the script would exit before even reaching the prompt.
+# --switch-generation additionally refuses to run as non-root.
+#
+# There is deliberately no --flake here: a generation switch reads systemConfig
+# back out of the profile, so the flake reference is inert. Rolling back is
+# about returning to a generation that already exists, not re-evaluating one.
 
 echo "${YELLOW}Available generations:${NC}"
-/run/current-system/sw/bin/darwin-rebuild --list-generations
+sudo /run/current-system/sw/bin/darwin-rebuild --list-generations
 
 echo "${YELLOW}Enter the generation number for rollback:${NC}"
 read GEN_NUM
@@ -20,6 +27,6 @@ if [ -z "$GEN_NUM" ]; then
 fi
 
 echo "${YELLOW}Rolling back to generation $GEN_NUM...${NC}"
-/run/current-system/sw/bin/darwin-rebuild switch --flake .#$FLAKE --switch-generation $GEN_NUM
+sudo /run/current-system/sw/bin/darwin-rebuild --switch-generation "$GEN_NUM"
 
 echo "${GREEN}Rollback to generation $GEN_NUM complete!${NC}"

@@ -22,11 +22,20 @@ FLAKE_SYSTEM="darwinConfigurations.\"${HOST}\".system"
 export NIXPKGS_ALLOW_UNFREE=1
 
 echo "${YELLOW}Building for host ${HOST}...${NC}"
-if ! nix --extra-experimental-features 'nix-command flakes' eval --raw ".#${FLAKE_SYSTEM}.outPath" >/dev/null 2>&1; then
+
+# Membership test only. Deliberately NOT `nix eval .#<host>.system >/dev/null 2>&1`:
+# that evaluates the whole system closure and discards stderr, so a genuine
+# error -- a type error, a bad module path, or the classic "new file not `git
+# add`ed so the flake cannot see it" -- would be reported as "unknown host"
+# with no diagnostics at all. `builtins.attrNames` forces only the attrset
+# spine, and any real evaluation failure now propagates verbatim from the
+# build below, which `set -e` still aborts on before sudo is ever reached.
+KNOWN=$(nix --extra-experimental-features 'nix-command flakes' eval \
+  --json .#darwinConfigurations --apply 'builtins.attrNames')
+
+if ! printf '%s' "$KNOWN" | grep -q "\"${HOST}\""; then
   echo "${RED}No darwinConfiguration named '${HOST}'.${NC}"
-  echo "${YELLOW}Known hosts:${NC}"
-  nix --extra-experimental-features 'nix-command flakes' eval \
-    .#darwinConfigurations --apply 'builtins.attrNames' 2>/dev/null
+  echo "${YELLOW}Known hosts: ${KNOWN}${NC}"
   echo "${YELLOW}Add it to flake.nix, or pass one explicitly: nix run .#build-switch -- <host>${NC}"
   exit 1
 fi
