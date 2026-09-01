@@ -5,7 +5,8 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
-FLAKE="aarch64-darwin"
+# See ./build-switch for why the host is resolved at runtime.
+FLAKE="${1:-$(scutil --get LocalHostName)}"
 
 echo "${YELLOW}Available generations:${NC}"
 /run/current-system/sw/bin/darwin-rebuild --list-generations

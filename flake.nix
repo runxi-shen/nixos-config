@@ -32,11 +32,11 @@
   outputs = { self, darwin, claude-code, nix-homebrew, homebrew-bundle, homebrew-core, homebrew-cask, home-manager, nixpkgs, agenix, secrets } @inputs:
     let
       inherit (self) outputs;
-      user = "runxishen";
-      # Kept for devShells and, from Phase 4 on, the Linux home closures that
-      # this flake exports for the lab servers. This repo owns no NixOS
-      # *system* config -- oppy/spirit/karkinos belong to runxi-shen/neusis,
-      # which consumes homeModules.rshen from here.
+      # Kept for devShells and the Linux home closures this flake exports for
+      # the lab servers. This repo owns no NixOS *system* config --
+      # oppy/spirit/karkinos belong to runxi-shen/neusis, which consumes
+      # homeModules.rshen from here. There are deliberately no Linux `apps`:
+      # every one of them drove the nixosConfigurations that Phase 1 removed.
       linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
       # Apple Silicon only. nixpkgs 26.11 dropped x86_64-darwin, so keeping it
       # here manufactures a darwinConfiguration that cannot evaluate -- for a
@@ -60,19 +60,12 @@
           exec ${self}/apps/${system}/${scriptName} "$@"
         '')}/bin/${scriptName}";
       };
-      mkLinuxApps = system: {
-        "apply" = mkApp "apply" system;
-        "build-switch" = mkApp "build-switch" system;
-        "build-switch-emacs" = mkApp "build-switch-emacs" system;
-        "clean" = mkApp "clean" system;
-        "copy-keys" = mkApp "copy-keys" system;
-        "create-keys" = mkApp "create-keys" system;
-        "check-keys" = mkApp "check-keys" system;
-        "install" = mkApp "install" system;
-        "install-with-secrets" = mkApp "install-with-secrets" system;
-      };
       mkDarwinApps = system: {
-        "apply" = mkApp "apply" system;
+        # `apply` is deliberately gone: it was upstream's fresh-install
+        # onboarding script. It sed-replaced %USER% tokens across every file in
+        # the tree, spliced flake.nix against a `disko` anchor Phase 1 removed,
+        # and opened the upstream repo to ask for a star. Running it on a
+        # configured machine would corrupt the config.
         "build" = mkApp "build" system;
         "build-switch" = mkApp "build-switch" system;
         "clean" = mkApp "clean" system;
@@ -87,34 +80,64 @@
       # flake. See overlays/default.nix.
       overlays = import ./overlays { inherit inputs outputs; };
       devShells = forAllSystems devShell;
-      apps = nixpkgs.lib.genAttrs linuxSystems mkLinuxApps // nixpkgs.lib.genAttrs darwinSystems mkDarwinApps;
-      darwinConfigurations = nixpkgs.lib.genAttrs darwinSystems (system:
-        darwin.lib.darwinSystem {
-          inherit system;
-          specialArgs = inputs // { inherit user outputs; };
-          modules = [
-            home-manager.darwinModules.home-manager
-            nix-homebrew.darwinModules.nix-homebrew
-            ({ pkgs, ... }: {
-              nix-homebrew = {
-                inherit user;
-                enable = true;
-                taps = {
-                  "homebrew/homebrew-core" = homebrew-core;
-                  "homebrew/homebrew-cask" = homebrew-cask;
-                  "homebrew/homebrew-bundle" = homebrew-bundle;
-                  # Local tap for casks not in homebrew-cask (must be a package, not a bare path)
-                  "runxishen/homebrew-zenkit" = pkgs.runCommandLocal "homebrew-zenkit" { } ''
-                    cp -R ${./taps/zenkit} $out
-                  '';
+      apps = nixpkgs.lib.genAttrs darwinSystems mkDarwinApps;
+
+      # Keyed by HOSTNAME, not by system. Keying by system forced every Apple
+      # Silicon Mac to an identical config and could not express a second
+      # machine at all. `user` is threaded per-host, which is what lets
+      # `runxishen` (this Mac, no account rename) and `rshen` (every other
+      # machine in the fleet) coexist -- and because homes/rshen never names a
+      # user, that argument is the ONLY difference between two Macs.
+      #
+      # The builder is an inline `let`, mirroring afermg/nixos-config, rather
+      # than a lib/default.nix: at this size the indirection costs more than it
+      # saves.
+      darwinConfigurations =
+        let
+          mkDarwin = { host, user }: darwin.lib.darwinSystem {
+            system = "aarch64-darwin";
+            specialArgs = inputs // { inherit user host outputs; };
+            modules = [
+              home-manager.darwinModules.home-manager
+              nix-homebrew.darwinModules.nix-homebrew
+              ({ pkgs, ... }: {
+                nix-homebrew = {
+                  inherit user;
+                  enable = true;
+                  taps = {
+                    "homebrew/homebrew-core" = homebrew-core;
+                    "homebrew/homebrew-cask" = homebrew-cask;
+                    "homebrew/homebrew-bundle" = homebrew-bundle;
+                    # Local tap for casks not in homebrew-cask (must be a package, not a bare path)
+                    "runxishen/homebrew-zenkit" = pkgs.runCommandLocal "homebrew-zenkit" { } ''
+                      cp -R ${./taps/zenkit} $out
+                    '';
+                  };
+                  mutableTaps = false;
+                  autoMigrate = true;
                 };
-                mutableTaps = false;
-                autoMigrate = true;
-              };
-            })
-            ./hosts/darwin
-          ];
-        }
-      );
+              })
+              # Settings shared by every Mac, then this host's own file.
+              ./hosts/darwin
+              (./hosts/darwin + "/${host}.nix")
+            ];
+          };
+
+          runxi-mbp = mkDarwin { host = "runxi-mbp"; user = "runxishen"; };
+        in
+        {
+          inherit runxi-mbp;
+
+          # apps/aarch64-darwin/build-switch resolves the host at runtime with
+          # `scutil --get LocalHostName`, which on this machine returns
+          # "Runxis-MacBook-Pro". Aliased to the same system so a rebuild needs
+          # no arguments and the Mac needs no rename. Same derivation, two
+          # names -- it costs nothing.
+          "Runxis-MacBook-Pro" = runxi-mbp;
+
+          # New MacBook Pro -- `rshen`, matching every Linux machine. Add
+          # hosts/darwin/rshen-mbp.nix and uncomment when it is in hand.
+          # "rshen-mbp" = mkDarwin { host = "rshen-mbp"; user = "rshen"; };
+        };
     };
 }
