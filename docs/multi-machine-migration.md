@@ -508,7 +508,7 @@ working network completes it.
 
 ---
 
-## Phase 4 — Export the agents module — status: DONE (pending commit)
+## Phase 4 — Export the agents module — status: DONE (4d617412)
 
 **Scope changed at execution time.** This phase originally exported the *whole* home
 profile (`homeModules.rshen` = all of `homes/rshen`) and Phase 5 shrank neusis's
