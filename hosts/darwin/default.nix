@@ -23,10 +23,12 @@ in
       experimental-features = nix-command flakes
     '';
   };
-  # Load configuration that is shared across systems
-  environment.systemPackages = with pkgs; [
+  # System-wide packages only. Everything else is user-level, supplied by the
+  # portable profile in homes/rshen -- which is what lets the same set ship to
+  # the lab servers, where we control no system config.
+  environment.systemPackages = [
     agenix.packages."${pkgs.system}".default
-  ] ++ (import ../../modules/shared/packages.nix { inherit pkgs; });
+  ];
 
   # Codex (Rust/rustls) trusts the Obsidian Local REST API's self-signed cert.
   # It reads CODEX_CA_CERTIFICATE, which is ADDITIVE to the native root store,

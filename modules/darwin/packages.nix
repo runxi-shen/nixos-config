@@ -1,12 +1,11 @@
+# Mac-only packages. The portable set lives in homes/rshen/{packages,dev,gui}.nix
+# and is applied by importing that profile in ./home-manager.nix.
 { pkgs }:
 
-with pkgs;
-let shared-packages = import ../shared/packages.nix { inherit pkgs; }; in
-shared-packages ++ [
+with pkgs; [
   # D
   dockutil # Manage icons in the dock
 
-  # D
   # dsh (DeepSeek Harness) launcher. Upstream 0.1.x enables cordis-plugin-hmr in
   # the web profile, which aborts boot unless node runs with --expose-internals.
   # node rejects that flag from NODE_OPTIONS, so bin.js must be invoked directly

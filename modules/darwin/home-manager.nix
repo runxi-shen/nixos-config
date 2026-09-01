@@ -70,6 +70,12 @@ in
         };
       in
       {
+        # The portable profile. nix-darwin has already set home.username and
+        # home.homeDirectory from `users.users.${user}` above, and a plain
+        # definition outranks the mkDefault inside homes/rshen/core.nix, so
+        # this Mac stays `runxishen` while the servers stay `rshen`.
+        imports = [ ../../homes/rshen ];
+
         home = {
           enableNixpkgsReleaseCheck = false;
           packages = pkgs.callPackage ./packages.nix {};
@@ -101,7 +107,6 @@ in
               /usr/bin/chflags uchg,hidden "$p" 2>/dev/null || true
             '';
         };
-        programs = {} // import ../shared/home-manager.nix { inherit config pkgs lib; };
         manual.manpages.enable = false;
       };
   };
