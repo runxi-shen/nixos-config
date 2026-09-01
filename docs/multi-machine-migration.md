@@ -643,6 +643,26 @@ That would have discarded all eleven `homes/common/` imports rshen currently rel
 
 The owner keeps all of it. This phase is now **additive**.
 
+**Step 0 — publish first. DONE (`bab93ab2`).** `github:runxi-shen/nixos-config` resolves to
+the **default branch**, so the export must be on `main` before neusis can reference it.
+`main` sat at `ab3f0266` (Phase 0) with no `homes/` directory at all; Phase 4 verification
+caught this as the one hard blocker. Fast-forwarded and pushed, then confirmed from the
+network rather than locally:
+
+```bash
+nix eval github:runxi-shen/nixos-config#homeModules --apply builtins.attrNames
+# [ "rshen-agents" ]
+```
+
+Do **not** work around a stale `main` by pinning neusis to
+`?ref=restructure/multi-machine`; that leaves three shared machines depending on a throwaway
+migration branch.
+
+**`claude-code` version, resolved before the PR.** Our pin gave 2.1.220 while neusis's own
+`claude-code-rshen` input gives 2.1.241, so importing this module would have *downgraded*
+claude on all three servers by ~3.5 weeks. `nix flake update claude-code` (its own commit,
+`bab93ab2`) took us to 2.1.252. The root nixpkgs pin is deliberately untouched.
+
 **Changes in `runxi-shen/neusis`** — three lines, two files under `homes/rshen/**` plus one
 shared-file input line:
 
@@ -672,6 +692,24 @@ nix build .#nixosConfigurations.karkinos.config.system.build.toplevel
 
 Run these **on a Linux machine** — the same "required system or feature not available"
 limitation that reshaped Phase 4's gate applies here, and these are full system closures.
+The owner verifies on **karkinos**, which `machines/registry.nix` confirms is x86_64-linux,
+matching Phase 4's gate. `homes/rshen/machines/karkinos.nix` is a bare
+`{ imports = [ ./oppy.nix ]; }`, so adding the import to `oppy.nix` alone reaches it.
+
+**Use `homeConfigurations."rshen@karkinos"`, which neusis already exposes.** It builds
+*just* the rshen home profile, exercising the exact consumer path without touching the
+system closure — and it is the only thing that surfaces a `home.packages` file collision,
+which `nix eval` cannot: buildEnv collisions only appear when the profile is *realised*.
+
+**Verified during Phase 4, so nobody re-litigates it:** a consumer never fetches this
+flake's private `git+ssh` `secrets` input. Tested with that URL rewritten to a nonexistent
+repo, a cold `XDG_CACHE_HOME`, and `GIT_SSH_COMMAND=/usr/bin/false` — locking and full
+`drvPath` forcing of `homeModules.rshen-agents` both succeeded. A root `nixos-rebuild` on
+karkinos will not need access to `runxi-shen/nix-secrets`.
+
+**The only `bin/claude` provider on the neusis side is `homes/rshen/home.nix:27`** — the
+line step 3 removes. Phase 4 verification enumerated every binary our three packages install
+and found no other collision.
 
 **Watch for:** a second nixpkgs generation landing on the servers. Our three agents come
 from a 2026-07-19 pin while everything else on the box comes from neusis's 2026-04-04 pin,
