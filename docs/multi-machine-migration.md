@@ -245,7 +245,7 @@ the *old root-input count*, transposed. Left uncorrected rather than rewrite his
 
 ---
 
-## Phase 2 — Make the home profile portable — status: TODO
+## Phase 2 — Make the home profile portable — status: DONE (8d72fb0d)
 
 **Goal:** convert the shared config into a real, username-agnostic home-manager module.
 This is the phase the whole plan turns on.
@@ -297,6 +297,41 @@ nix run .#build                                # this Mac still builds
 builds. (Cross-building the Linux closure is gated on Phase 4's outputs existing.)
 
 **Commit:** `Extract portable, username-agnostic home profile under homes/rshen`
+
+**Deviations and decisions at execution time**
+
+- **`imports` cannot branch on `pkgs`.** The first attempt used
+  `imports = [ … ] ++ lib.optional pkgs.stdenv.hostPlatform.isDarwin ./gui.nix`, which is an
+  **infinite recursion**: `pkgs` reaches a module through `_module.args`, which is part of
+  `config`, and `imports` is resolved before `config` exists. `gui.nix` is therefore
+  imported unconditionally and gated internally with `lib.mkIf`. Same trap applies to
+  anything else added under `homes/`.
+- **Username via `lib.mkDefault "rshen"`, not "never set it".** The stricter original
+  invariant and afermg's `username ? null` default reconcile here: a plain definition
+  outranks `mkDefault`, so nix-darwin (`runxishen`) and neusis (`rshen`) both win silently,
+  and the literal `runxishen` still never appears under `homes/`. `home.stateVersion` gets
+  the same treatment so the module works standalone.
+- **Git identity is an option**, `rshen.gitUserEmail` / `rshen.gitUserName`, rather than a
+  constant or a function argument. neusis sets the Broad address per host from its own tree
+  without this repo knowing anything about it.
+- **Packages moved from `environment.systemPackages` to `home.packages`.** That is what
+  makes them shippable to machines where we control no system config. Note they were
+  previously installed *twice* on this Mac — once system-wide via
+  `hosts/darwin/default.nix` and again in `home.packages` via `modules/darwin/packages.nix`.
+  Verified package-neutral by evaluating the union of both option sets before and after:
+  **77 derivations → 77, zero lost, zero gained.**
+- **Emacs stack deleted** (`modules/shared/emacs.nix`, `config/emacs/{config.org,config.el,
+  init.el}`), resolving the Phase 1 carry-forward. No importer survived Phase 1, no `.nix`
+  deployed `config.el`, emacs is in no package list, and all 55 commits touching it are the
+  upstream owner's. `modules/shared/cachix/` is still unreferenced — left for Phase 6.
+- **The grep guard must stay literal.** Comments in `homes/` that quoted the forbidden
+  strings tripped the invariant check. Reworded; do not reintroduce them, or the guard
+  stops guarding.
+
+**Verified beyond the stated checks:** the built home generation resolves
+`@resurrect-dir '/Users/runxishen/.cache/tmux/resurrect'` and
+`Include /Users/runxishen/.ssh/config_external` — byte-identical to the pre-refactor
+hardcodes, now derived rather than written.
 
 ---
 
