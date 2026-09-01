@@ -239,7 +239,9 @@ first-class checked outputs.
 **`nix flake lock`, never `nix flake update`.** `flake.nix:4` says `nixos-unstable`, but the
 lock deliberately pins root nixpkgs to `241313f4e8e5` (2026-07-19) for the
 livekit-on-darwin breakage. `lock` drops orphaned nodes and keeps existing pins; `update`
-would silently un-pin. 15 nodes dropped, 10 root inputs remain, pin intact.
+would silently un-pin. **8 orphaned lock nodes dropped** (28 → 20), root inputs 15 → 10,
+pin intact. (`2d2c07f6`'s commit message says "15 orphaned nodes"; that is wrong — 15 was
+the *old root-input count*, transposed. Left uncorrected rather than rewrite history.)
 
 ---
 
@@ -273,6 +275,23 @@ grep -rn "runxishen\|/Users/" homes/           # ZERO hits — the core invarian
 nix flake check
 nix run .#build                                # this Mac still builds
 ```
+
+**Carried forward from Phase 1 verification**
+
+- **Orphaned Emacs stack.** `modules/shared/emacs.nix` and `config/emacs/{config.org,
+  config.el}` now have **no importer** — their only consumers were the deleted
+  `hosts/nixos/*`. No `.nix` deploys `config.el` either. Decide here: delete it, or wire it
+  for Darwin. `CLAUDE.md` documents an Emacs workflow and a `build-switch-emacs` app, so
+  this needs an explicit call rather than silent drift. `modules/shared/cachix/` is
+  likewise unreferenced (pre-existing, not caused by Phase 1).
+- **Git identity is per-host.** This repo hardcodes `shenrunxi@gmail.com`
+  (`modules/shared/home-manager.nix:5`); neusis's `common/dev/git.nix` sets
+  `shenrunxi@broadinstitute.org` for the lab servers. A portable profile cannot hardcode
+  one. Make it an option with the gmail default, overridden per-host.
+- **Username handling.** Adopt afermg's shape (`homes/amunoz/home.nix:1-9`): a
+  `username ? null` argument with a Linux default, rather than refusing to set
+  `home.username` at all. Set it via `lib.mkDefault` so a consumer — nix-darwin on the
+  Macs, neusis on the servers — always wins and can never collide at eval.
 
 **Exit criteria:** `homes/` contains no username and no `/Users/` path; this Mac still
 builds. (Cross-building the Linux closure is gated on Phase 4's outputs existing.)
@@ -314,6 +333,21 @@ argument — so renaming this machine to `rshen` later is editing that string.
   *is* the "same settings on all Macs" requirement.
 - Rewrite `apps/*/build-switch` to resolve at runtime:
   `HOST=$(scutil --get LocalHostName)` → `.#darwinConfigurations.$HOST.system`.
+
+**Carried forward from Phase 1 verification — widen the `apps/` scope**
+
+Deleting `nixosConfigurations` orphaned more than `build-switch`. Delete
+`apps/{x86_64-linux,aarch64-linux,x86_64-darwin}` and `mkLinuxApps` wholesale:
+
+- `apps/*-linux/build-switch` (`:39,42,55`), `build-switch-emacs`, `clean:16`, `install`
+  and `install-with-secrets` all target the dropped `nixosConfigurations`.
+- `apps/*/apply` splices `insert_secrets_input` against a **`disko` anchor** that no longer
+  exists in `flake.nix` — running it would now *truncate* the flake.
+- `apps/x86_64-darwin/` has been unreachable since Phase 0 reduced `darwinSystems`.
+
+Also consider afermg's position here: he has **no `apps/` at all**, driving
+`darwin-rebuild --flake .#<host>` directly. Keeping `apps/` is a deliberate divergence —
+`CLAUDE.md` documents `nix run .#build-switch` as *the* rebuild command.
 
 **Verify**
 
@@ -361,6 +395,11 @@ homeConfigurations."rshen@oppy" = lib.homeManagerConfiguration {
 Baking `_module.args` and `nixpkgs` *into* the module is deliberate, copied from Alan's
 comment in `afermg/nixos-config`: a consumer's `extraSpecialArgs` would otherwise shadow
 this flake's `outputs`.
+
+**Decide: all overlays, or just `claude-code`?** The snippet above applies only
+`outputs.overlays.claude-code`, whereas `modules/shared/default.nix` applies
+`builtins.attrValues outputs.overlays`. Left as-is, server `pkgs` would silently diverge
+from Mac `pkgs`. Pick one deliberately.
 
 **Prerequisite already landed in Phase 1.** `outputs.overlays.claude-code` did not exist
 when this phase was written — `overlays/` was an anonymous directory scan. Phase 1 replaced
@@ -441,6 +480,17 @@ Only after Phases 0–5 verify.
   confirmation at execution time.
 - Update `CLAUDE.md`: remove the "Syncing with Upstream" section (no longer true); document
   the two-repo relationship and the `nix flake update rshen-nixos-config` cadence.
+- **Broaden the doc sweep** (from Phase 1 verification). `CLAUDE.md` and the byte-identical
+  `AGENTS.md` still teach the deleted auto-scanning overlay contract (`:85`, `:99-103`,
+  `:131`) and still point at deleted paths — `modules/nixos/packages.nix`,
+  `hosts/nixos/default.nix` "felix", `disk-config.nix`, `templates/`, `.#install`,
+  `.#build-switch-emacs` — plus a Wayland/KDE "System Environment" section describing a
+  machine this repo no longer has. `overlays/README.md:3` repeats the auto-load claim and
+  lists nine deleted overlays. `README.md` is still upstream's project README verbatim
+  (`:384` links the deleted `modules/nixos/README.md`). Sweep all four at once, against the
+  final tree — Phases 2-4 will invalidate more of `CLAUDE.md` first.
+- Drop the stale `.gitignore` entries `modules/nixos/scripts/__pycache__/` and
+  `tests/garage-analyzer/__pycache__/`.
 - Delete `backup/personalize-pre-rebase-2026-08-22`.
 
 **Verify**
@@ -460,6 +510,11 @@ grep -rn "nix-configs" ~/.claude/CLAUDE.md CLAUDE.md AGENTS.md   # no stale poin
 **`nix flake update`.** `nixpkgs` sits at 2026-07-19 with a known livekit-on-darwin
 breakage and a temporary `pandas-stubs` overlay. Restructure on a known-good lock; update
 as its own commit afterwards so any regression is bisectable.
+
+Retire `overlays/pandas-stubs-skip-tests.nix` in that same commit. Phase 1 verification
+found it is already **obsolete at the current pin**: `python3Packages.pandas-stubs` is now
+`3.0.3.260530` (the overlay's comment says 2.3.3) and `doCheck = false` landed upstream, so
+its only remaining effect is `pythonImportsCheck = [ ]`.
 
 ## Risks
 
