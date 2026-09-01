@@ -38,6 +38,29 @@ in
   launchd.user.envVariables.CODEX_CA_CERTIFICATE =
     "/Users/${user}/.claude/obsidian-local-rest-api.pem";
 
+  # dsh (DeepSeek Harness) web UI. Owned by launchd rather than a shell so it
+  # survives terminal exits and logouts, and KeepAlive restarts it if it dies.
+  # ThrottleInterval stops a missing/broken npm tree from hot-looping.
+  # WorkingDirectory is the agent's workspace root -- deliberately a dedicated
+  # empty dir, since the harness ships bash and filesystem tools and would
+  # otherwise take whatever directory it was launched from.
+  # See modules/darwin/packages.nix for why node needs --expose-internals.
+  launchd.user.agents.dsh-web = {
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      ThrottleInterval = 30;
+      WorkingDirectory = "/Users/${user}/dsh-workspace";
+      StandardOutPath = "/tmp/dsh-web.out.log";
+      StandardErrorPath = "/tmp/dsh-web.err.log";
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        "exec ${pkgs.nodejs_22}/bin/node --expose-internals \"$HOME/.local/share/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js\" web --no-open --port 3080"
+      ];
+    };
+  };
+
   #launchd.user.agents = {
   #  emacs = {
   #    path = [ config.environment.systemPath ];

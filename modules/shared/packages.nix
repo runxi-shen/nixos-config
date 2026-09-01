@@ -52,6 +52,7 @@ with pkgs; [
   nodejs_22              # Node.js JavaScript runtime (LTS)
   myPython               # Python 3 with common packages
   pi-coding-agent        # Pi coding agent CLI (read/bash/edit/write tools)
+  pnpm                   # Fast npm alternative; `dsh plugin` forwards to it
   sqlite                 # SQL database engine
   uv                     # Python package installer
 
