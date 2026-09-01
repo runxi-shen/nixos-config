@@ -120,7 +120,7 @@ improvising a redesign — the phase boundaries are what keep this recoverable.
 
 ---
 
-## Phase 0 — Land current work, cut the cord — status: TODO
+## Phase 0 — Land current work, cut the cord — status: DONE (ab3f0266, 8c075190)
 
 **Goal:** clean tree, `main` carries everything, upstream detached. No structural changes.
 
@@ -150,6 +150,16 @@ nix run .#build                     # builds this Mac, does not switch
 `nix run .#build` passes; on branch `restructure/multi-machine`.
 
 **Commit:** `darwin: add dsh web harness via launchd` (for step 1; steps 2–6 are branch ops)
+
+**Deviations at execution time**
+
+- `nix flake check` was **already red before this phase**: `genAttrs darwinSystems`
+  manufactured a `darwinConfigurations.x86_64-darwin` that cannot evaluate, because
+  nixpkgs 26.11 dropped x86_64-darwin. Fixed in-phase (`8c075190`) by reducing
+  `darwinSystems` to `[ "aarch64-darwin" ]` — the same reduction Phase 3 implies. Deferring
+  it would have left a red baseline that hides new breakage in Phases 1–4.
+- `origin/personalize` still exists on GitHub (remote deletion was blocked locally). It is
+  fully contained in `main`, so it holds nothing unique — delete at leisure.
 
 ---
 
