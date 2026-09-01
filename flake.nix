@@ -54,7 +54,10 @@
     let
       user = "runxishen";
       linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
-      darwinSystems = [ "aarch64-darwin" "x86_64-darwin" ];
+      # Apple Silicon only. nixpkgs 26.11 dropped x86_64-darwin, so keeping it
+      # here manufactures a darwinConfiguration that cannot evaluate and fails
+      # `nix flake check` -- for a machine that does not exist.
+      darwinSystems = [ "aarch64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs (linuxSystems ++ darwinSystems) f;
       devShell = system: let pkgs = nixpkgs.legacyPackages.${system}; in {
         default = with pkgs; mkShell {
