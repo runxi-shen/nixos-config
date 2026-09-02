@@ -717,8 +717,50 @@ so some runtime dependencies will be duplicated. `nix build --dry-run` on the ex
 closure reported 209 paths / 625 MiB to fetch, though much of that will already exist from
 neusis's own profile. Measure real disk impact on oppy before assuming it is free.
 
-**Exit criteria:** all three system closures build; PR opened; no changes outside
-`homes/rshen/**` and the one `flake.nix` input line.
+**Verification results on karkinos (2026-09-02)**
+
+| check | result |
+|---|---|
+| `homeConfigurations."rshen@karkinos"` builds | ✅ — this is the gate that catches buildEnv collisions; `nix eval` cannot |
+| `bin/{claude,codex,pi}` resolve | ✅ `claude-code-2.1.252`, `codex-0.144.4`, `pi-coding-agent-0.80.10` — our pins, not neusis's |
+| `nixosConfigurations.karkinos` | ✅ builds |
+| `nixosConfigurations.spirit` | ✅ builds |
+| `nixosConfigurations.oppy` | ❌ **pre-existing failure, unrelated** — see below |
+
+**Real disk cost: +911.9 MiB** on the karkinos system closure (`nix store diff-closures`).
+The three agents account for +570.1 MiB (codex +433, pi-coding-agent +259, claude-code
+**−122**, because 2.1.241 → 2.1.252 is smaller); the remaining +341.8 MiB is the second
+toolchain that pinning to our nixpkgs drags in — `nodejs-slim` +98, a **second glibc** +67
+(`2.42-67, 2.42-84` now coexist), `icu4c` +44, `openssl` +21, `gcc` +20. The earlier
+"209 paths / 625 MiB" dry-run figure was measured against an empty x86_64-linux store slice
+on the Mac and is not the number that matters. `nix path-info -Sh` reporting 20.5 GiB is the
+*total* home closure (texlive, nixvim, …), not the delta.
+
+**oppy is broken on `main`, independently of this change.**
+`overleaf-vendored-src-0-unstable-2026-04-13` fails a fixed-output-derivation hash check
+(`sha256-kFyel33Z…` specified, `sha256-SxE1R9Sr…` got). Proven pre-existing by rebuilding
+with this branch stashed: the FOD's `.drv` path is **byte-identical**
+(`akifkzczq7riqd04nkzmiclfpdmbq4pj`) and both hashes match exactly; only downstream paths
+differ, as expected. A FOD's hash depends solely on the content it fetches, so nothing in
+`home.packages` could affect it. Structurally confirmed too: `machines/oppy/` has
+`overleaf.nix` and `overleaf-git-bridge.nix`, while karkinos has only
+`overleaf-ingress.nix` — which is exactly why karkinos builds and oppy does not. Needs a
+separate fix to neusis's `overleaf-nix` input; call it out in the PR so it is not attributed
+to this change.
+
+**`claude-code-rshen` is dropped in the same commit.** Its only consumer was the
+`homes/rshen/home.nix` line removed here, so leaving it would orphan an input this very
+change killed. Three earlier objections were considered and rejected: an upstream merge does
+**not** conflict (git only conflicts when both sides touch the same region — upstream leaves
+the block alone, so the deletion applies silently); reverting is *easier* as one commit, not
+harder, since `git revert` restores input and consumer together; and the "one shared-file
+line" discipline exists to protect other users, which an input named `-rshen` does not
+affect. `claude-code-nix` is a **different** input and stays — upstream's own comment records
+that jfredinh and amunoz consume it.
+
+**Exit criteria:** karkinos and spirit system closures build (oppy blocked by the
+pre-existing overleaf FOD); PR opened; no changes outside `homes/rshen/**` and `flake.nix`'s
+input list; `homes/common/**` untouched.
 
 **Ongoing cadence after this:** change lands here → in neusis,
 `nix flake update rshen-nixos-config` → rebuild. `homeConfigurations."rshen@oppy"` is for
