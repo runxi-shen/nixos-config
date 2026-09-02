@@ -35,15 +35,57 @@ The apps resolve the target host at runtime from `scutil --get LocalHostName`, s
 `darwinConfigurations` is keyed by hostname rather than by system. Override explicitly with
 `nix run .#build-switch -- <host>`.
 
-Adding a second Mac is one line in `flake.nix` plus a host file:
+## Setting up a new Mac
 
-```nix
-"rshen-mbp" = mkDarwin { host = "rshen-mbp"; user = "rshen"; };
-```
+1. **Install Nix.** Either [Determinate](https://determinate.systems/nix) or the upstream
+   installer works — the choice decides `nix.enable` in step 3.
 
-`user` is threaded per-host, which is what lets this machine stay `runxishen` while every
-other machine in the fleet is `rshen`. Because the home profile never names a user, that
-argument is the only difference between two Macs.
+2. **Clone and name the machine.** `darwinConfigurations` is keyed by hostname, and the apps
+   resolve it from `scutil --get LocalHostName`, so pick the key to match — or add an alias,
+   as `hosts/darwin/default.nix` does for `Runxis-MacBook-Pro`.
+
+   ```bash
+   git clone git@github.com:runxi-shen/nixos-config.git ~/Projects/software/nixos-config
+   cd ~/Projects/software/nixos-config
+   scutil --get LocalHostName
+   ```
+
+3. **Write `hosts/darwin/<host>.nix`.** Copy `hosts/darwin/runxi-mbp.nix` and keep only what
+   applies. Two things are mandatory:
+
+   - **`local.dock.entries`** — every Mac enables the dock, and omitting `entries` evaluates
+     cleanly and then *wipes* the dock. An assertion catches this, but you still have to
+     decide: copy the block, or set `local.dock.enable = false;`.
+   - **`nix.enable`** — `false` for Determinate Nix (it manages its own daemon), `true` for
+     the upstream installer. Not shared, because it is a property of the install.
+
+   Optional: casks, dock, launchd agents, cloud-storage symlinks — all per-machine.
+
+4. **Register it** in `flake.nix`, inside the `darwinConfigurations` `let`:
+
+   ```nix
+   rshen-mbp = mkDarwin { host = "rshen-mbp"; user = "rshen"; };
+   ```
+
+   and add it to the returned attrset (`inherit runxi-mbp rshen-mbp;`).
+
+   `user` is threaded per-host, which is what lets this machine stay `runxishen` while every
+   other machine in the fleet is `rshen`. Because the home profile never names a user, that
+   argument is the only difference between two Macs.
+
+5. **`git add` everything** — flakes cannot see untracked files, and a new host file that
+   isn't staged fails in a way that looks unrelated.
+
+6. **Build, then switch.**
+
+   ```bash
+   nix run .#build -- rshen-mbp        # no changes to the machine
+   nix run .#build-switch -- rshen-mbp
+   ```
+
+Homebrew is installed declaratively by `nix-homebrew`; casks download on first activation,
+so the first switch is slow. If a cask fails to fetch, the activation aborts with the system
+profile already advanced — re-run `build-switch` and it completes.
 
 ## Layout
 
