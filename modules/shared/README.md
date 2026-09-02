@@ -9,7 +9,6 @@ it was made exportable.
 ```
 .
 ├── config             # Non-Nix config assets (wezterm.lua)
-├── cachix             # Cachix substituter definition (currently unreferenced)
 ├── default.nix        # nixpkgs config + applies outputs.overlays
 ├── files.nix          # Static files placed into $HOME
 └── fonts.nix          # Font package list, consumed by homes/rshen/gui.nix
