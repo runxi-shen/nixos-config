@@ -893,14 +893,31 @@ one branch.
 
 ## Deferred deliberately
 
-**`nix flake update`.** `nixpkgs` sits at 2026-07-19 with a known livekit-on-darwin
-breakage and a temporary `pandas-stubs` overlay. Restructure on a known-good lock; update
-as its own commit afterwards so any regression is bisectable.
+**`nix flake update` — DONE 2026-09-02.** Was deferred so the restructure happened on a
+known-good lock. Executed after Phase 6, as its own commit.
 
-Retire `overlays/pandas-stubs-skip-tests.nix` in that same commit. Phase 1 verification
-found it is already **obsolete at the current pin**: `python3Packages.pandas-stubs` is now
-`3.0.3.260530` (the overlay's comment says 2.3.3) and `doCheck = false` landed upstream, so
-its only remaining effect is `pythonImportsCheck = [ ]`.
+nixpkgs 2026-07-19 → 2026-08-31, plus `darwin`, `home-manager`, `nix-homebrew`,
+`claude-code` and the `homebrew-*` inputs. `agenix` had nothing newer; `secrets` is private
+and unchanged.
+
+**The pin's stated reason turned out to be wrong.** It was recorded as a
+livekit-on-darwin breakage, but `livekit-libwebrtc` substituted from cache without trouble.
+What actually blocked the update was `jupyter-server` 2.21.0 failing one flaky async test on
+aarch64-darwin (`test_disconnect_resolves_orphaned_kernel_info_future`, TimeoutError —
+1 failed, 886 passed). It reaches the system closure through
+`markitdown` → `pdfplumber` → `jupyter-server` as a **build-time** chain.
+
+**Structural note for future updates:** `markitdown` costs the entire Jupyter stack as a
+build dependency, so *any* flaky test in that tree fails the whole system build. The
+specific offender rotates — it was `pandas-stubs`, now it is `jupyter-server`. Dropping
+`markitdown` and `markitdown-mcp` from `homes/rshen/dev.nix` would make routine updates
+substantially less fragile, if they turn out not to earn their keep.
+
+`overlays/pandas-stubs-skip-tests.nix` retired as planned: at the new pin it is 3.0.5 with
+`doCheck = false` already upstream, so the overlay had no remaining effect. Replaced by
+`overlays/jupyter-server-flaky-test.nix`, which is deliberately narrower — `disabledTests`
+for the single failing test rather than `doCheck = false`, so the other 886 keep running —
+and which documents the command that says when it is safe to delete.
 
 ## Risks
 
