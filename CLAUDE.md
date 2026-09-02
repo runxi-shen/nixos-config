@@ -4,171 +4,150 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a cross-platform NixOS configuration repository supporting both macOS (via nix-darwin) and NixOS systems. It uses Nix Flakes exclusively and follows a modular architecture.
+Nix flake configuring **Macs as full nix-darwin systems**, plus a **portable home-manager
+profile** exported for Linux machines managed elsewhere. Originally a fork of
+`dustinlyons/nixos-config`; upstream was detached in 2026-09 and the previous owner's
+machines removed.
 
-## System Environment
+This repo owns **no NixOS system configuration**. The Linux machines in the fleet —
+`oppy`, `spirit`, `karkinos` — are shared lab servers (~15 users) owned by
+`shntnu/neusis`. Their system config is not ours to touch; only the home half is.
 
-- **Display Server**: Wayland (not X11)
-- **Desktop Environment**: KDE Plasma 6
-- **Window Manager**: KWin (Wayland)
+## The two-repo relationship
 
-Important: When working with GUI applications, ensure Wayland compatibility. For example:
-- Use `rofi-wayland` instead of `rofi`
-- Check for Wayland-specific versions of applications
-- Some X11-only applications may need XWayland compatibility layer
-
-## Key Commands
-
-### Building and Switching Configurations
-
-**NixOS (x86_64-linux):**
-```bash
-# Build and switch to new configuration
-nix run .#build-switch
-
-# Build, switch, and restart Emacs daemon (use after Emacs config changes)
-nix run .#build-switch-emacs
-
-# Install fresh system (without secrets)
-nix run .#install
-
-# Install fresh system (with secrets)
-nix run .#install-with-secrets
-
-# Clean up old generations and boot files (frees disk space)
-nix run .#clean
+```
+runxi-shen/nixos-config  ──homeModules.rshen-agents──>  shntnu/neusis
+        (this repo)                                     (shared lab servers)
 ```
 
-**Important:** 
-- After making changes to Nix configuration files, run `nix run .#build-switch`
-- After making changes to Emacs configuration (`modules/shared/config/emacs/config.org`), run `nix run .#build-switch-emacs`
+`neusis/homes/rshen/machines/oppy.nix` imports
+`inputs.rshen-nixos-config.homeModules.rshen-agents`; `spirit` and `karkinos` inherit it
+through `oppy.nix`. Everything else about the `rshen` account there — git identity and
+signing, editors, themes, browsers, tailscale — comes from neusis's own `homes/common/`,
+which is **shared by fifteen users and must never be edited**.
 
-**macOS (x86_64-darwin):**
-```bash
-# Test build without switching
-nix run .#build
+**Cadence:** land a change here → in neusis, `nix flake update rshen-nixos-config` → rebuild.
 
-# Build and switch to new configuration
-nix run .#build-switch
-
-# Rollback to previous generation
-nix run .#rollback
-
-# Clean up old generations (frees disk space)
-nix run .#clean
-```
-
-### Development Commands
+**Obligation:** `main` is a dependency of that shared infrastructure. Before pushing to
+`main`, confirm the exported module still evaluates for Linux:
 
 ```bash
-# Update flake inputs
-nix flake update
-
-# Check flake
-nix flake check
-
-# Format Nix files
-nixpkgs-fmt .
-
-# Lint Nix code (runs in CI)
-statix check
+nix eval --raw '.#homeConfigurations."rshen@oppy".activationPackage.drvPath'
 ```
+
+## Key commands
+
+```bash
+nix run .#build          # build this Mac's system; does NOT switch
+nix run .#build-switch   # build and activate (needs sudo; Touch ID is enabled)
+nix run .#rollback       # list generations and switch back to one
+nix run .#clean          # garbage-collect generations older than 7 days
+
+nix flake check          # validate all outputs
+nix run nixpkgs#statix -- check .   # lint (the only CI job)
+```
+
+`build` and `build-switch` resolve the host at runtime via `scutil --get LocalHostName`,
+and accept an explicit override: `nix run .#build-switch -- <host>`.
+
+**Updating inputs.** `nixpkgs` is deliberately pinned to `241313f4e8e5` (2026-07-19) because
+of a livekit-on-darwin breakage. Use `nix flake lock` to prune orphaned nodes — it preserves
+pins. `nix flake update` (no argument) would silently un-pin nixpkgs. To bump one input:
+`nix flake update claude-code`.
 
 ## Architecture
 
-### Directory Structure
-- `hosts/` - Host-specific configurations (darwin/default.nix for macOS, nixos/default.nix for NixOS)
-- `modules/` - Modular configuration components:
-  - `shared/` - Cross-platform configurations (packages, home-manager, fonts)
-  - `nixos/` - Linux-specific packages and configurations
-  - `darwin/` - macOS-specific packages and Homebrew integration
-- `overlays/` - Auto-loading Nix overlays (any .nix file here runs automatically)
-- `apps/` - Platform-specific build and deployment scripts
-- `templates/` - Starter templates for new users
+```
+flake.nix              inputs; outputs: darwinConfigurations, homeModules,
+                       homeConfigurations, overlays, apps, devShells
+homes/rshen/           the portable home profile
+  default.nix          imports core + packages + dev + agents + gui
+  core.nix             zsh, git, vim, tmux, direnv, ssh; declares options.rshen.*
+  packages.nix         portable CLI
+  dev.nix              toolchain; PORTABLE -- see warning below
+  agents.nix           claude-code, codex, pi-coding-agent; ALSO exported
+  gui.nix              alacritty, fonts, zed-editor; Darwin-gated with mkIf
+  config/p10k.zsh
+hosts/darwin/
+  default.nix          settings true of EVERY Mac
+  runxi-mbp.nix        this machine only: casks, dock, launchd agents, cloud links
+modules/darwin/        casks.nix, dock/, files.nix, home-manager.nix, packages.nix, secrets.nix
+modules/shared/        default.nix (nixpkgs config + overlays), files.nix, fonts.nix, cachix/
+overlays/default.nix   NAMED overlays, exported as outputs.overlays
+apps/aarch64-darwin/   build, build-switch, rollback, clean, *-keys
+taps/zenkit/           local Homebrew tap
+```
 
-### Key Patterns
+`darwinConfigurations` is keyed by **hostname**, not system. `mkDarwin { host, user }` is an
+inline `let` in `flake.nix` — there is no `lib/`. `user` is threaded per-host, which is what
+lets this Mac stay `runxishen` while every Linux machine is `rshen`.
+`"Runxis-MacBook-Pro"` is aliased to `"runxi-mbp"` because that is what `scutil` returns.
 
-1. **Module Inheritance**: Platform-specific modules extend shared configurations
-   ```nix
-   # Example from modules/nixos/packages.nix
-   packages = with pkgs; [
-     # Shared packages are inherited
-   ] ++ sharedPackages;
-   ```
+## Working with this repository
 
-2. **Auto-loading Overlays**: Drop any .nix file in `overlays/` and it loads automatically via:
-   ```nix
-   # modules/shared/default.nix
-   nixpkgs.overlays = import ../../overlays {inherit lib pkgs inputs outputs;};
-   ```
+### CRITICAL: git tracking
 
-3. **Secrets Management**: Uses `agenix` for encrypted secrets
-   - Secrets defined in `hosts/{platform}/secrets/secrets.nix`
-   - Age keys in `hosts/{platform}/secrets/keys/`
+Flakes only see files tracked by git. `git add` ANY new file before building, or it will
+appear not to exist. This is the single most common failure mode here.
 
-4. **Home Manager Integration**: User-level configurations in `modules/shared/home-manager.nix`
+### Where a package goes
 
-### Important Configuration Files
+| Scope | Location |
+|---|---|
+| Portable CLI (Macs **and** lab servers) | `homes/rshen/packages.nix` |
+| Portable dev toolchain | `homes/rshen/dev.nix` |
+| Coding agents (shared with the servers via the export) | `homes/rshen/agents.nix` |
+| Mac-only CLI | `modules/darwin/packages.nix` |
+| Mac-only GUI / fonts | `homes/rshen/gui.nix` |
+| macOS apps | `modules/darwin/casks.nix` (per-host; imported by `hosts/darwin/runxi-mbp.nix`) |
 
-- `flake.nix` - Main entry point defining inputs and system configurations
-- `hosts/nixos/default.nix` - NixOS system configuration (hostname: "felix")
-- `hosts/darwin/default.nix` - macOS system configuration
-- `modules/shared/packages.nix` - Cross-platform package definitions
-- `modules/shared/home-manager.nix` - Shell, editor, and tool configurations
+**`homes/rshen/dev.nix` and `agents.nix` reach the shared lab servers.** Adding a line there
+installs software on machines fifteen people use. The bar is "I want this on
+oppy/spirit/karkinos too."
 
-## Working with This Repository
+### Constraints inside `homes/`
 
-### CRITICAL: Git Tracking Requirement
-**IMPORTANT:** When creating ANY new file in this repository (overlays, modules, configurations, etc.), you MUST add it to git with `git add` before running `nix run .#build-switch`. Nix flakes only see files tracked by git, so untracked files will cause build failures. This applies to ALL files, not just overlays.
+- Never write a concrete username or an absolute home path. Enforced by
+  `grep -rn "runxishen\|/Users/" homes/` returning nothing — keep those literals out of
+  comments too, or the guard stops guarding.
+- `imports` cannot branch on `pkgs`. `pkgs` arrives via `_module.args`, which is part of
+  `config`, and `imports` resolves first — so `lib.optional pkgs.stdenv.…` there is an
+  infinite recursion. Import unconditionally and gate with `lib.mkIf` (see `gui.nix`).
+- `agents.nix` sources packages from `rshenInputs.nixpkgs.legacyPackages`, not ambient
+  `pkgs`, so the servers get our pins rather than neusis's older ones. `legacyPackages`
+  carries no `nixpkgs.config`, so nothing unfree may come from it — that is why
+  `claude-code` comes from its flake input instead.
 
-### Adding Packages
-1. **Cross-platform packages**: Add to `modules/shared/packages.nix`
-2. **NixOS-only packages**: Add to `modules/nixos/packages.nix`
-3. **macOS-only packages**: Add to `modules/darwin/packages.nix`
-4. **Homebrew casks (macOS)**: Add to `modules/darwin/casks.nix`
+### Overlays
 
-### Creating Overlays
-Create a new .nix file in `overlays/` directory. It will be automatically loaded.
+`overlays/default.nix` returns a **named attrset**, exported as `outputs.overlays` and
+applied via `builtins.attrValues outputs.overlays` in `modules/shared/default.nix`. It is
+**not** the auto-loading directory scanner this repo used to have; names are required so an
+individual overlay stays addressable by a consuming flake.
 
-### Modifying Shell Configuration
-Edit `modules/shared/home-manager.nix` for:
-- Zsh configuration and aliases
-- Git settings
-- Terminal emulator (Alacritty) configuration
-- Tmux settings
-- SSH configuration
+### Secrets
 
-### Editing Emacs Configuration
-The Emacs configuration is a literate Org-mode file at `modules/shared/config/emacs/config.org`. This file:
-- Contains all Emacs configuration in Org-mode code blocks
-- Is automatically tangled to `config.el` when building
-- Includes comprehensive documentation alongside the configuration
-- Supports adding new packages and customizations in the appropriate sections
+`agenix`, wired at `modules/darwin/secrets.nix` against the private `secrets` input. The
+secrets set is currently empty — the plumbing exists, nothing uses it yet. Consumers of
+`homeModules.rshen-agents` never fetch that input.
 
-**Important:** When making changes to Emacs configuration:
-1. Edit `modules/shared/config/emacs/config.org`
-2. If adding a new package, also add it to `modules/shared/emacs.nix`
-3. Run `nix run .#build-switch` to rebuild the configuration
-4. Restart the Emacs daemon with: `emacsclient -e "(kill-emacs)"`
-5. The daemon will automatically restart when you next use Emacs
-6. **Update cheatsheets:** Check if the relevant cheatsheets in `/home/dustin/cheatsheets/` need to be updated with new keybindings or features (especially `emacs.md`)
+## Testing changes
 
-### System-specific Changes
-- **NixOS boot/kernel**: `hosts/nixos/default.nix`
-- **macOS system settings**: `hosts/darwin/default.nix`
-- **Disk partitioning (NixOS)**: `hosts/nixos/disk-config.nix`
+1. `nix flake check`
+2. `nix run .#build` — builds without switching
+3. `nix eval --raw '.#homeConfigurations."rshen@oppy".activationPackage.drvPath'` if you
+   touched anything under `homes/`. **Evaluate, do not build**: home-manager generates
+   trivial x86_64-linux derivations that exist in no cache, so a Mac cannot build the Linux
+   closure at all. Add `nix.linux-builder.enable = true` if that is ever needed.
+4. `nix run .#build-switch`
 
-## Testing Changes
+## CI
 
-Always test configuration changes before applying:
-1. Run `nix flake check` to validate the flake
-2. Use platform-specific build command to test
-3. Review changes before switching
+One workflow: `statix` lint. The three upstream workflows that built
+`dustinlyons/nixos-config` templates were removed — one was scheduled weekly and would have
+auto-PR'd an unpinned `flake.lock` over the deliberate nixpkgs pin.
 
-## CI/CD
+## History
 
-GitHub Actions automatically:
-- Tests starter template builds
-- Runs statix linting on Nix code
-- Updates flake.lock weekly
-- Manages dependencies via Dependabot
+`docs/multi-machine-migration.md` is the record of the 2026-09 restructure, phase by phase,
+including deviations and what verification found. Read it before making structural changes.

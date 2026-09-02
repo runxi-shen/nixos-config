@@ -72,30 +72,62 @@ the **amunoz pattern** as system-of-record.
 
 ## Target structure
 
+**As planned** (kept for the record; see the AS-BUILT block below for what actually landed):
+
 ```
 flake.nix                  # inputs; outputs: darwinConfigurations, homeModules,
                            #   homeConfigurations, overlays, devShells
 lib/default.nix            # mkDarwin / mkHome builders
-
 homes/rshen/               # THE portable profile — no username appears anywhere
-  default.nix              #   real HM module: core + dev
-  core.nix                 #   zsh, git, vim, tmux, direnv, ssh  (from shared/home-manager.nix)
-  packages.nix             #   portable CLI only
-  dev.nix                  #   claude-code, codex, gh/glab, node, python, uv
-  gui.nix                  #   alacritty, zed-editor, fonts — Macs only
+  default.nix / core.nix / packages.nix / dev.nix / gui.nix
   machines/{oppy,spirit,karkinos}.nix   # server extras: poetry, pixi, duckdb, gitleaks
-
-hosts/darwin/
-  default.nix              # shared macOS system config: defaults, homebrew, nix settings
-  runxi-mbp.nix            # per-host: casks, dock, host-only launchd (dsh)
-modules/darwin/            # dock/, casks.nix, secrets.nix, packages.nix
-overlays/                  # trimmed to what's used
-apps/                      # trimmed; build-switch resolves hostname at runtime
+hosts/darwin/{default,runxi-mbp}.nix
+modules/darwin/  overlays/  apps/
 ```
 
-**Invariant for `homes/rshen/`:** never hardcode a username or an absolute `/Users/…`
-path; derive from `config.home.homeDirectory`. `home.username` / `home.homeDirectory` are
-set by the builder (`mkHome`) or the consumer (neusis) — never by the module.
+**AS BUILT** (verified against the tree, 2026-09-02):
+
+```
+flake.nix                  # outputs: darwinConfigurations (hostname-keyed),
+                           #   homeModules.rshen-agents, homeConfigurations."rshen@oppy",
+                           #   overlays, apps, devShells
+                           # mkDarwin { host, user } is an inline `let` — NO lib/
+
+homes/rshen/
+  default.nix              #   imports core + packages + dev + agents + gui
+  core.nix                 #   zsh, git, vim, tmux, direnv, ssh; declares options.rshen.*
+  packages.nix             #   portable CLI
+  dev.nix                  #   gh/glab, go, node, python, uv — portable
+  agents.nix               #   claude-code, codex, pi-coding-agent — ALSO exported
+  gui.nix                  #   alacritty, fonts, zed-editor — imported always, mkIf isDarwin
+  config/p10k.zsh
+
+hosts/darwin/
+  default.nix              # every Mac: nix, system.defaults, keyboard, Touch ID sudo
+  runxi-mbp.nix            # this machine: casks, dock, dsh + codex launchd, cloud links
+modules/darwin/            # casks.nix, dock/, files.nix, home-manager.nix, packages.nix, secrets.nix
+modules/shared/            # default.nix, files.nix, fonts.nix, cachix/, config/wezterm.lua
+overlays/default.nix       # NAMED overlays exported as outputs.overlays
+apps/aarch64-darwin/       # build, build-switch, rollback, clean, *-keys
+```
+
+**Differences from the plan, and why:**
+
+- **No `lib/`.** `mkDarwin` is a six-line inline `let`, mirroring `afermg/nixos-config`. At
+  this size the indirection cost more than it saved. There is no `mkHome` at all.
+- **`homes/rshen/machines/` deleted.** It held the server extras, but Phase 4 was rescoped
+  to export only the agents — neusis already installs duckdb, poetry, pixi and gitleaks, so
+  those files had no consumer.
+- **`agents.nix` added**, exported as `homeModules.rshen-agents`. Not in the original plan,
+  which exported the whole profile as `homeModules.rshen`.
+- **`gui.nix` is imported unconditionally** and gated with `lib.mkIf`, not selected in
+  `imports` — branching `imports` on `pkgs` is an infinite recursion.
+
+**Invariant for `homes/rshen/`:** never hardcode a username or an absolute home path; derive
+from `config.home.homeDirectory`. `home.username` and `home.homeDirectory` are set by the
+consumer — nix-darwin on the Macs, neusis on the servers — with only `lib.mkDefault`
+fallbacks in `core.nix`, which a plain definition always outranks. Enforced mechanically by
+`grep -rn "runxishen\|/Users/" homes/` returning nothing.
 
 ---
 

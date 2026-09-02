@@ -1,94 +1,40 @@
 # Overlays
 
-Files in this directory are automatically loaded as Nix overlays during each build. Overlays allow you to:
-* Add new packages or create custom package definitions
-* Override existing packages with patches, different versions, or configurations
-* Create wrapper scripts and development tools
-* Package AppImages and other external binaries
+`default.nix` returns a **named attrset** of overlays, exported as the flake output
+`outputs.overlays` and applied via `builtins.attrValues outputs.overlays` in
+`modules/shared/default.nix`.
 
-**Important:** All overlay files must be added to git before building (`git add <file>.nix`) since Nix flakes only see tracked files.
+This is deliberately **not** the auto-loading directory scanner this repo used to carry.
+That loader mapped every `*.nix` here into an anonymous list, so no individual overlay could
+be referenced from anywhere else — and an exported `homeModule` may need to hand one
+specific overlay to a consuming flake, which requires it to have a name. Pattern taken from
+`afermg/nixos-config`.
 
-## Current Overlays
+**Adding an overlay:** add a named attribute to `default.nix`. Give it a file of its own
+only when it carries enough explanation to be worth separating — `pandas-stubs` does,
+because its comment records the upstream breakage that tells us when it is safe to delete.
 
-### AppImage Packages
-- **`cider-appimage.nix`** - Apple Music client with Wayland support
-- **`tableplus-appimage.nix`** - Database GUI tool, fetched from latest release
-- **`wowup-appimage.nix`** - World of Warcraft addon manager
+**Flakes only see tracked files.** `git add` before building.
 
-### Development Tools
-- **`linear-cli.nix`** - Linear CLI wrapper using npx and Node.js 20
-- **`playwright.nix`** - Playwright with browser dependencies and wrapper script
-- **`phpstorm.nix`** - JetBrains PhpStorm with custom JDK override
+## Current overlays
 
-## Common Patterns
+| name | purpose |
+|---|---|
+| `claude-code` | Claude Code from the `sadjow/claude-code-nix` flake input, taking `inputs` as an argument — something the old bare `final: prev:` loader could not do |
+| `pandas-stubs` | Skips a failing test suite that blocked `markitdown` via `pdfplumber`. **Likely obsolete** at the current pin — `doCheck = false` landed upstream and only `pythonImportsCheck = [ ]` still has effect. Re-check and delete during the next `nix flake update`. |
 
-### AppImage Wrapper with Wayland Support
+## Shape
+
 ```nix
-self: super: with super; {
-  app-name = appimageTools.wrapType2 rec {
-    pname = "app-name";
-    version = "1.0.0";
-    src = ./app.AppImage;  # or fetchurl for remote
-
-    nativeBuildInputs = [ makeWrapper ];
-
-    extraInstallCommands = ''
-      wrapProgram $out/bin/${pname} \
-        --add-flags "--ozone-platform=wayland --enable-features=UseOzonePlatform"
-    '';
-  };
-}
-```
-
-### NPM/Node.js Tool Wrapper
-```nix
-final: prev: {
-  tool-name = prev.writeShellScriptBin "tool-name" ''
-    export PATH="${prev.nodejs_20}/bin:$PATH"
-    exec ${prev.nodejs_20}/bin/npx --yes package-name "$@"
-  '';
-}
-```
-
-### Package Override with Custom JDK
-```nix
-final: prev: {
-  jetbrains = prev.jetbrains // {
-    phpstorm = prev.jetbrains.phpstorm.override {
-      jdk = prev.jdk21;
-    };
-  };
-}
-```
-
-### Development Environment with Dependencies
-```nix
-final: prev:
-let
-  deps = with prev; [ lib1 lib2 lib3 ];
-in {
-  tool-deps = prev.buildEnv {
-    name = "tool-deps";
-    paths = deps;
+{ inputs, ... }:
+{
+  my-overlay = final: _prev: {
+    my-package = inputs.some-flake.packages.${final.stdenv.hostPlatform.system}.default;
   };
 
-  tool-wrapper = prev.writeScriptBin "tool-wrapper" ''
-    export LD_LIBRARY_PATH="${prev.lib.makeLibraryPath deps}:$LD_LIBRARY_PATH"
-    exec "$@"
-  '';
+  from-a-file = import ./my-overlay.nix;
 }
 ```
 
-### Fetching from GitHub with Specific Commit
-```nix
-final: prev: {
-  package-name = prev.package-name.overrideAttrs (old: {
-    src = prev.fetchFromGitHub {
-      owner = "owner";
-      repo = "repo";
-      rev = "commit-hash";
-      sha256 = "sha256-hash";  # Use fake hash first, Nix will show correct one
-    };
-  });
-}
-```
+Prefer `final` over `prev` when referring to the resulting package set, and name the unused
+argument `_prev` so `statix` stays quiet.

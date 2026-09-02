@@ -3,5 +3,3 @@
 result
 .DS_Store
 .claude
-modules/nixos/scripts/__pycache__/
-tests/garage-analyzer/__pycache__/
