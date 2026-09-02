@@ -830,7 +830,7 @@ one to do carefully — see the collision note in Phase 4.
 
 ---
 
-## Phase 6 — Retire nix-configs, update docs — status: TODO
+## Phase 6 — Retire nix-configs, update docs — status: DONE except archival (342dde29)
 
 Only after Phases 0–5 verify.
 
@@ -859,7 +859,12 @@ Only after Phases 0–5 verify.
   unconditionally rather than "Macs only".
 - Drop the stale `.gitignore` entries `modules/nixos/scripts/__pycache__/` and
   `tests/garage-analyzer/__pycache__/`.
-- Delete `backup/personalize-pre-rebase-2026-08-22`.
+- Delete `backup/personalize-pre-rebase-2026-08-22`. **DONE.** Note it was *not* an
+  ancestor of `main` — the rebase gave every commit a new SHA, so
+  `git merge-base --is-ancestor` reported it as unmerged. `git cherry main <branch>` compares
+  **patch-ids** instead and marked all 25 commits `-`, i.e. content already present. Use
+  `cherry`, not `is-ancestor`, to decide whether a rebased branch is safe to drop. There was
+  no copy on `origin`.
 
 **Verify**
 
