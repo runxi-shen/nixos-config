@@ -10,6 +10,12 @@
 { config, pkgs, lib, user, ... }:
 
 {
+  # This Mac runs Determinate Nix, which manages its own daemon; nix-darwin must
+  # keep its hands off. A machine installed with the upstream Nix installer
+  # wants `true` instead, which is why this is per-host rather than shared.
+  # Verified: /run/current-system/etc has no nix.conf.
+  nix.enable = false;
+
   # Apps installed by Homebrew rather than Nix -- per-machine by nature.
   homebrew.casks = pkgs.callPackage ../../modules/darwin/casks.nix { };
 

@@ -12,9 +12,17 @@
     ../../modules/shared
     agenix.darwinModules.default
   ];
-  # Setup user, packages, programs
+  # Nix settings shared by every Mac. `nix.enable` is deliberately NOT set here:
+  # whether nix-darwin manages the daemon depends on how Nix was installed on
+  # that machine, so each host declares it. Determinate Nix manages its own
+  # daemon and requires `enable = false`; a Mac installed with the upstream
+  # installer wants `true`.
+  #
+  # Note that everything below is inert while `nix.enable = false` -- nix-darwin
+  # writes no /etc/nix/nix.conf at all in that mode, so on such a host these
+  # substituters and trusted-users must be configured in Determinate's own
+  # config instead.
   nix = {
-    enable = false;
     package = pkgs.nix;
     settings = {
       trusted-users = [ "@admin" "${user}" ];
