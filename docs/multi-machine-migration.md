@@ -621,7 +621,25 @@ zero lost and zero gained.
 
 ---
 
-## Phase 5 — Wire up neusis — status: TODO
+## Phase 5 — Wire up neusis — status: PR OPEN (shntnu/neusis#34)
+
+**Standing obligation once #34 merges.** `runxi-shen/nixos-config@main` becomes a dependency
+of shared lab infrastructure. Until now `main` had zero consumers, which is what made
+publishing Phases 0-4 to it risk-free; that property ends at merge. The input is
+`url = "github:runxi-shen/nixos-config"` with no `ref`, so it tracks the default branch —
+`flake.lock` pins the rev so nothing moves on its own, but the next `nix flake update` in
+neusis takes whatever is on `main` at that moment.
+
+**Before pushing to `main`, run the gate:**
+
+```bash
+nix eval --raw '.#homeConfigurations."rshen@oppy".activationPackage.drvPath'
+```
+
+If that fails, `homeModules.rshen-agents` is broken and the next neusis update inherits it.
+Keeping the exported module narrow is now load-bearing, not merely tidy.
+
+
 
 **Separate repo. Land as a PR — this rebuilds machines other people use.**
 
