@@ -75,10 +75,32 @@ in
     };
   };
 
-  # Fully declarative dock. `entries` is per-host and has no default -- each
-  # host file must declare its own; see hosts/darwin/<host>.nix.
+  # Fully declarative dock. `entries` is per-host; see hosts/darwin/<host>.nix.
+  #
+  # The assertion is load-bearing. `entries` is declared `types.listOf` with no
+  # `default`, but listOf supplies an `emptyValue` of [ ], so a host file that
+  # simply forgets its dock block EVALUATES CLEANLY -- and then the activation
+  # script runs `dockutil --remove all` and silently wipes the dock. Failing
+  # loudly at eval is the only way a new machine finds out before the fact.
+  # (The option is `readOnly`, so a default cannot be added without patching
+  # the vendored dock module.)
   local.dock = {
     enable   = true;
     username = user;
   };
+
+  assertions = [
+    {
+      assertion = !config.local.dock.enable || config.local.dock.entries != [ ];
+      message = ''
+        local.dock.enable is true but local.dock.entries is empty, which would
+        clear the dock entirely on activation.
+
+        Declare the dock in hosts/darwin/<host>.nix -- copy the block from
+        hosts/darwin/runxi-mbp.nix as a starting point -- or set
+        `local.dock.enable = false;` in that host file if an unmanaged dock is
+        what you actually want.
+      '';
+    }
+  ];
 }
