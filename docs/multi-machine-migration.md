@@ -830,16 +830,19 @@ one to do carefully — see the collision note in Phase 4.
 
 ---
 
-## Phase 6 — Retire nix-configs, update docs — status: DONE except archival (342dde29)
+## Phase 6 — Retire nix-configs, update docs — status: DONE (342dde29, 911c5dd0)
 
 Only after Phases 0–5 verify.
 
 **Changes**
 
-- `runxi-shen/nix-configs` is an unmodified fork of `afermg/nixos-config` kept as a
-  reference bookmark; nothing references it (neusis mentions `afermg/nix-configs` in two
-  comments only). **Archive rather than delete** — same effect, reversible. Needs explicit
-  confirmation at execution time.
+- `runxi-shen/nix-configs` — **deleted**, not archived. The plan called for archiving as the
+  reversible option, but the owner chose deletion: *"I'll always use alan's config as a
+  reference and I won't contribute or sync. The fork is not necessary here."* Verified
+  pristine first — `gh api repos/afermg/nixos-config/compare/main...runxi-shen:nix-configs:main`
+  reported `ahead_by: 0` with zero unique commits, one branch, and no issues, PRs, releases
+  or forks. Deleting therefore lost nothing that `afermg/nixos-config` does not still have.
+  Reference that repo directly from now on; do not re-fork it.
 - Update `CLAUDE.md`: remove the "Syncing with Upstream" section (no longer true); document
   the two-repo relationship and the `nix flake update rshen-nixos-config` cadence.
 - **Broaden the doc sweep** (from Phase 1 verification). `CLAUDE.md` and the byte-identical
@@ -866,13 +869,23 @@ Only after Phases 0–5 verify.
   `cherry`, not `is-ancestor`, to decide whether a rebased branch is safe to drop. There was
   no copy on `origin`.
 
+Also deleted, after the doc sweep: the branches `personalize` and
+`restructure/multi-machine` on `origin` (both fully merged), leaving `main` as the only
+branch — which matters now that neusis's input tracks the default branch and a stale
+migration branch is exactly the thing someone could pin to by mistake.
+
 **Verify**
 
 ```bash
 grep -rn "nix-configs" ~/.claude/CLAUDE.md CLAUDE.md AGENTS.md   # no stale pointers
+nix flake check && nix run .#build
+nix eval --raw '.#homeConfigurations."rshen@oppy".activationPackage.drvPath'
+git ls-remote --heads origin                                     # main only
 ```
 
-**Exit criteria:** `nix-configs` archived; `CLAUDE.md` describes the real workflow.
+**Exit criteria met:** no stale pointers in any doc; `CLAUDE.md`/`AGENTS.md`/`README.md` and
+the four component READMEs describe the repo as built; `nix-configs` removed; `origin` has
+one branch.
 
 **Commit:** `Document multi-machine layout; drop upstream sync workflow`
 
