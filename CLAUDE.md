@@ -70,8 +70,10 @@ homes/rshen/           the portable home profile
   config/p10k.zsh
 hosts/darwin/
   default.nix          settings true of EVERY Mac
-  runxi-mbp.nix        this machine only: casks, dock, launchd agents, cloud links
-modules/darwin/        casks.nix, dock/, files.nix, home-manager.nix, packages.nix, secrets.nix
+  runxi-mbp.nix        user runxishen: casks, dock, launchd agents, cloud links
+  rshen-mbp.nix        user rshen: casks, dock
+modules/darwin/        casks.nix (runxi-mbp), casks-rshen-mbp.nix, dock/, files.nix,
+                       home-manager.nix, packages.nix, secrets.nix
 modules/shared/        default.nix (nixpkgs config + overlays), files.nix, fonts.nix, cachix/
 overlays/default.nix   NAMED overlays, exported as outputs.overlays
 apps/aarch64-darwin/   build, build-switch, rollback, clean, *-keys
@@ -80,8 +82,19 @@ taps/zenkit/           local Homebrew tap
 
 `darwinConfigurations` is keyed by **hostname**, not system. `mkDarwin { host, user }` is an
 inline `let` in `flake.nix` — there is no `lib/`. `user` is threaded per-host, which is what
-lets this Mac stay `runxishen` while every Linux machine is `rshen`.
-`"Runxis-MacBook-Pro"` is aliased to `"runxi-mbp"` because that is what `scutil` returns.
+lets `runxi-mbp` stay `runxishen` while `rshen-mbp` and every Linux machine are `rshen`.
+That argument is the *only* difference between the two Macs' `mkDarwin` calls, because
+nothing under `homes/` names a user.
+`"Runxis-MacBook-Pro"` is aliased to `"runxi-mbp"` because that is what `scutil` returns
+there. **Both Macs shipped with that same default name** -- macOS derives it from the
+ComputerName -- so `rshen-mbp` was renamed once at setup with
+`sudo scutil --set LocalHostName rshen-mbp`. Undo that and a bare `build-switch` on this
+Mac silently builds the other machine's config under the wrong username.
+
+`rshen-mbp` runs Determinate Nix (`nix.enable = false`), so nix-darwin writes no
+`/etc/nix/nix.conf` and the `nix.settings` in `hosts/darwin/default.nix` are inert there;
+its substituters and `trusted-users` live in `/etc/nix/nix.custom.conf` instead. See the
+README's new-Mac section.
 
 ## Working with this repository
 
@@ -99,7 +112,7 @@ appear not to exist. This is the single most common failure mode here.
 | Coding agents (shared with the servers via the export) | `homes/rshen/agents.nix` |
 | Mac-only CLI | `modules/darwin/packages.nix` |
 | Mac-only GUI / fonts | `homes/rshen/gui.nix` |
-| macOS apps | `modules/darwin/casks.nix` (per-host; imported by `hosts/darwin/runxi-mbp.nix`) |
+| macOS apps | per-host: `modules/darwin/casks.nix` (runxi-mbp) or `casks-rshen-mbp.nix`. Adding an app to one Mac does NOT add it to the other. |
 
 **`homes/rshen/dev.nix` and `agents.nix` reach the shared lab servers.** Adding a line there
 installs software on machines fifteen people use. The bar is "I want this on

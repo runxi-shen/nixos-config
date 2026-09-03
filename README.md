@@ -42,13 +42,25 @@ The apps resolve the target host at runtime from `scutil --get LocalHostName`, s
 
 2. **Clone and name the machine.** `darwinConfigurations` is keyed by hostname, and the apps
    resolve it from `scutil --get LocalHostName`, so pick the key to match — or add an alias,
-   as `hosts/darwin/default.nix` does for `Runxis-MacBook-Pro`.
+   as `flake.nix` does for `Runxis-MacBook-Pro`.
 
    ```bash
-   git clone git@github.com:runxi-shen/nixos-config.git ~/Projects/software/nixos-config
-   cd ~/Projects/software/nixos-config
+   git clone git@github.com:runxi-shen/nixos-config.git ~/nixos-config
+   cd ~/nixos-config
    scutil --get LocalHostName
    ```
+
+   **Expect a collision.** macOS derives `LocalHostName` from the ComputerName you type in
+   Setup Assistant, so a second Mac set up by the same person reports the *same* default —
+   both of these machines answered `Runxis-MacBook-Pro` out of the box, and that string is
+   already aliased to `runxi-mbp`. A bare `build-switch` on the new Mac would then silently
+   build the *other* machine's config, under the wrong username. Rename it once:
+
+   ```bash
+   sudo scutil --set LocalHostName rshen-mbp
+   ```
+
+   This changes only the Bonjour/network name; `ComputerName` is untouched.
 
 3. **Write `hosts/darwin/<host>.nix`.** Copy `hosts/darwin/runxi-mbp.nix` and keep only what
    applies. Two things are mandatory:
@@ -85,7 +97,26 @@ The apps resolve the target host at runtime from `scutil --get LocalHostName`, s
 
 Homebrew is installed declaratively by `nix-homebrew`; casks download on first activation,
 so the first switch is slow. If a cask fails to fetch, the activation aborts with the system
-profile already advanced — re-run `build-switch` and it completes.
+profile already advanced — re-run `build-switch` and it completes. `dockutil` runs in that
+same activation, so dock entries pointing at not-yet-installed casks are skipped on the
+first pass and settle on the second.
+
+**If you chose Determinate** (`nix.enable = false`), nix-darwin writes no `/etc/nix/nix.conf`
+at all, which makes the `substituters`, `trusted-public-keys` and `trusted-users` in
+`hosts/darwin/default.nix` inert on that host. Determinate's own `nix.conf` `!include`s
+`/etc/nix/nix.custom.conf` and never overwrites it, so that file is where they go:
+
+```
+extra-substituters = https://nix-community.cachix.org
+extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+trusted-users = root @admin <user>
+```
+
+Reload the daemon afterwards — `determinate-nixd` has no `restart` subcommand:
+
+```bash
+sudo launchctl kickstart -k system/systems.determinate.nix-daemon
+```
 
 ## Layout
 

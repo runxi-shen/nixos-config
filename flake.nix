@@ -190,20 +190,28 @@
           };
 
           runxi-mbp = mkDarwin { host = "runxi-mbp"; user = "runxishen"; };
+
+          # The second MacBook Pro -- `rshen`, matching every Linux machine in
+          # the fleet. `user` is the ONLY difference from runxi-mbp above:
+          # homes/rshen names no username, so both Macs share it verbatim.
+          rshen-mbp = mkDarwin { host = "rshen-mbp"; user = "rshen"; };
         in
         {
-          inherit runxi-mbp;
+          inherit runxi-mbp rshen-mbp;
 
           # apps/aarch64-darwin/build-switch resolves the host at runtime with
-          # `scutil --get LocalHostName`, which on this machine returns
-          # "Runxis-MacBook-Pro". Aliased to the same system so a rebuild needs
-          # no arguments and the Mac needs no rename. Same derivation, two
-          # names -- it costs nothing.
+          # `scutil --get LocalHostName`. This alias exists because runxi-mbp
+          # still answers "Runxis-MacBook-Pro" -- the macOS default derived from
+          # its ComputerName -- so a rebuild there needs no arguments and that
+          # Mac needs no rename. Same derivation, two names.
+          #
+          # BOTH Macs shipped with that same default name. rshen-mbp was
+          # therefore renamed once, at setup, with
+          #     sudo scutil --set LocalHostName rshen-mbp
+          # so that this alias stays unambiguously runxi-mbp's. Undo that rename
+          # and a bare `build-switch` on the new Mac would silently build the
+          # old machine's config, under the wrong username.
           "Runxis-MacBook-Pro" = runxi-mbp;
-
-          # New MacBook Pro -- `rshen`, matching every Linux machine. Add
-          # hosts/darwin/rshen-mbp.nix and uncomment when it is in hand.
-          # "rshen-mbp" = mkDarwin { host = "rshen-mbp"; user = "rshen"; };
         };
     };
 }
