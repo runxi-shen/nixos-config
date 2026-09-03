@@ -24,7 +24,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        # Pinned to a release tag, not @main. @main was inherited from upstream
+        # and re-resolves on every run, so CI could break from a third party's
+        # push with no change here. The action publishes only major tags, which
+        # move within their line, so this still picks up patches -- same
+        # convention as actions/checkout@v4 above. Dependabot used to bump this;
+        # it was upstream's config and is gone, so this is now a manual bump.
+        uses: DeterminateSystems/nix-installer-action@v22
 
       - name: Run statix linter
         run: |
