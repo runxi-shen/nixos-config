@@ -135,12 +135,31 @@ apps/aarch64-darwin/   build, build-switch, rollback, clean, key management
 package belongs. `docs/multi-machine-migration.md` records the 2026-09 restructure phase by
 phase, including what verification found.
 
-## Credits
+## Lineage
 
-Forked from [dustinlyons/nixos-config](https://github.com/dustinlyons/nixos-config), which
-is where the nix-darwin scaffolding, the declarative dock module, and the app-runner pattern
-originally came from. Upstream was detached in 2026-09 and the previous owner's machines
-removed; BSD 3-Clause license and copyright retained in `LICENSE`.
+**This is a standalone repository.** It began as a fork of
+[dustinlyons/nixos-config](https://github.com/dustinlyons/nixos-config), but the previous
+owner's machines were removed in the 2026-09 restructure and the GitHub fork network was
+left in 2026-09. There is no parent repo, no `upstream` remote, and no merge path from
+anywhere — `origin` is the only remote.
 
-Structural patterns — named overlays, per-host `mkDarwin`, and exporting a home profile for
-another flake to consume — follow [afermg/nixos-config](https://github.com/afermg/nixos-config).
+Two repos are still read, as **reference only** — never merged, never added as a remote,
+never a flake input:
+
+- [afermg/nixos-config](https://github.com/afermg/nixos-config) — **primary.** The
+  structural patterns here follow it: named overlays, per-host `mkDarwin`, and exporting a
+  home profile for another flake to consume. It is also the pattern `neusis` already runs
+  for another user, which is what makes it the right shape to copy.
+- [dustinlyons/nixos-config](https://github.com/dustinlyons/nixos-config) — **secondary,**
+  for new nix-on-macOS technique only: nix-darwin idioms, Homebrew and cask handling,
+  activation tricks. Its organisational choices are superseded here.
+
+Ideas get reimplemented in this repo's shape; commits do not get merged.
+
+## License
+
+BSD 3-Clause, © 2021 Dustin Lyons, retained in `LICENSE`. Leaving the fork network changed
+nothing about this: roughly 890 lines of the live configuration are still upstream-authored
+— `homes/rshen/config/p10k.zsh`, `modules/darwin/dock/`, `apps/*-keys`, and parts of
+`flake.nix` and `hosts/darwin/default.nix`. The nix-darwin scaffolding, the declarative dock
+module and the app-runner pattern all originated there.

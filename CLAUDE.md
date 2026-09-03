@@ -5,15 +5,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository Overview
 
 Nix flake configuring **Macs as full nix-darwin systems**, plus a **portable home-manager
-profile** exported for Linux machines managed elsewhere. Originally a fork of
-`dustinlyons/nixos-config`; upstream was detached in 2026-09 and the previous owner's
-machines removed.
+profile** exported for Linux machines managed elsewhere.
+
+### Standalone repo — no upstream
+
+Originally a fork of `dustinlyons/nixos-config`. The previous owner's machines were removed
+in the 2026-09 restructure, and the GitHub **fork network was left in 2026-09**: there is no
+parent repo, no `upstream` remote, and no merge path from anywhere. `origin` is the only
+remote and it is this repo.
+
+Two repos are read as **REFERENCE ONLY**. Never merge from them, never add either as a
+remote, never make either a flake input:
+
+| Repo | Role |
+|---|---|
+| `afermg/nixos-config` | **Primary reference.** Structural patterns already followed here: named overlays, per-host `mkDarwin`, exporting a home profile for another flake to consume. Prefer its shape when a structural question comes up. It is also the pattern neusis already runs for another user. |
+| `dustinlyons/nixos-config` | **Secondary.** Consult only for new nix-on-macOS technique — nix-darwin idioms, Homebrew/cask handling, activation tricks. Everything organisational there is superseded. |
+
+Copy ideas, not commits. If something from either is worth having, reimplement it in this
+repo's shape and explain why in the commit message.
+
+BSD-3-Clause © Dustin Lyons is retained in `LICENSE`, and that obligation is permanent and
+unrelated to the fork network: roughly 890 lines of the live config are still upstream-
+authored — `homes/rshen/config/p10k.zsh`, `modules/darwin/dock/`, `apps/*-keys`, and parts
+of `flake.nix` and `hosts/darwin/default.nix`.
 
 This repo owns **no NixOS system configuration**. The Linux machines in the fleet —
 `oppy`, `spirit`, `karkinos` — are shared lab servers (~15 users) owned by
 `shntnu/neusis`. Their system config is not ours to touch; only the home half is.
 
-## The two-repo relationship
+## Downstream: the neusis contract
 
 ```
 runxi-shen/nixos-config  ──homeModules.rshen-agents──>  shntnu/neusis
@@ -159,6 +180,16 @@ secrets set is currently empty — the plumbing exists, nothing uses it yet. Con
 One workflow: `statix` lint. The three upstream workflows that built
 `dustinlyons/nixos-config` templates were removed — one was scheduled weekly and would have
 auto-PR'd an unpinned `flake.lock` over the deliberate nixpkgs pin.
+
+Upstream's `.github/dependabot.yml` was dropped for the same reason: nothing should open a
+PR here that nobody asked for. The cost is that action versions are now a **manual** bump,
+so both are pinned to release tags (`actions/checkout@v4`,
+`DeterminateSystems/nix-installer-action@v22`) rather than `@main`, which re-resolved on
+every run and could break CI from a third party's push.
+
+`lint.yml` sets `paths-ignore: ['.github/**', 'README.md']`, so a commit touching only CI or
+the README does **not** trigger it — a workflow change is first exercised on the next push
+that touches a `.nix` file.
 
 ## History
 
