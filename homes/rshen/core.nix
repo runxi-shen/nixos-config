@@ -90,6 +90,18 @@ in
           export PATH=$HOME/.local/share/bin:$PATH
           export PATH=$PATH:$HOME/.local/bin      # user-local scripts (claude-science, pip); appended so Nix's claude wins over any native install
 
+          # Homebrew's prefix. nix-homebrew creates it and nix-darwin drives
+          # `brew bundle` at activation, but neither puts brew on an interactive
+          # PATH -- so `brew` was "command not found" on a fresh Mac even though
+          # every cask was being managed declaratively.
+          #
+          # A plain append, NOT `eval "$(brew shellenv)"`: shellenv PREPENDS, which
+          # would let a Homebrew binary shadow the Nix-provided one of the same
+          # name. Casks here are GUI apps; nothing should outrank the Nix profile.
+          ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+            export PATH=$PATH:/opt/homebrew/bin
+          ''}
+
           # Remove history data we don't want to see
           export HISTIGNORE="pwd:ls:cd"
 
