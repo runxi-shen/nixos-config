@@ -118,6 +118,24 @@ in
           # Always color ls and group directories
           alias ls='ls --color=auto'
 
+          # Duplex printing on the Purdue COS queues. Those queues run a generic
+          # PostScript PPD that declares no duplex unit, so print dialogs show no
+          # Two-Sided control and CUPS can strip a stored `sides` default during
+          # filtering. The server-side Windows driver DOES honor the attribute
+          # when it survives to the backend, which is why passing it on the
+          # command line works where the GUI cannot.
+          #
+          # Deliberately no `-d <queue>`: lp falls back to the default
+          # destination, so this follows whatever `lpstat -d` reports instead of
+          # pinning a queue name that goes stale when COS IT renames one. lp takes
+          # options in any order, so a one-off override still reads naturally:
+          #     dprint -d dsai2048co report.pdf
+          #     dprint -P 1-30 thesis.pdf
+          # Terminal printing only -- GUI apps need a real model PPD.
+          ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+            alias dprint='lp -o sides=two-sided-long-edge'
+          ''}
+
           # macOS-style open command on Linux
           ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
             alias open="xdg-open"
