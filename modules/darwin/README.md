@@ -12,6 +12,7 @@ e.g. `hosts/darwin/runxi-mbp.nix`.
 ├── casks.nix          # Homebrew casks; imported by the host file, so effectively per-host
 ├── files.nix          # Static files placed into $HOME
 ├── home-manager.nix   # Wires home-manager and imports homes/rshen
+├── onedrive-purdue.nix # ~/Purdue_OneDrive alias + tombstone; imported by BOTH hosts
 ├── packages.nix       # Mac-only packages (portable ones live in homes/rshen)
 └── secrets.nix        # Age-encrypted secrets via agenix
 ```

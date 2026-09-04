@@ -91,10 +91,12 @@ homes/rshen/           the portable home profile
   config/p10k.zsh
 hosts/darwin/
   default.nix          settings true of EVERY Mac
-  runxi-mbp.nix        user runxishen: casks, dock, launchd agents, cloud links
+  runxi-mbp.nix        user runxishen: casks, dock, launchd agents, Nutstore link
   rshen-mbp.nix        user rshen: casks, dock
+                       BOTH import modules/darwin/onedrive-purdue.nix
 modules/darwin/        casks.nix (runxi-mbp), casks-rshen-mbp.nix, dock/, files.nix,
-                       home-manager.nix, packages.nix, secrets.nix
+                       home-manager.nix, onedrive-purdue.nix, packages.nix,
+                       secrets.nix
 modules/shared/        default.nix (nixpkgs config + overlays), files.nix, fonts.nix, cachix/
 overlays/default.nix   NAMED overlays, exported as outputs.overlays
 apps/aarch64-darwin/   build, build-switch, rollback, clean, *-keys

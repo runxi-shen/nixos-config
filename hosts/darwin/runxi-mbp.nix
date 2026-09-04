@@ -10,6 +10,13 @@
 { config, pkgs, lib, user, ... }:
 
 {
+  imports = [
+    # Purdue OneDrive: the ~/Purdue_OneDrive alias and the tombstone that keeps
+    # "OneDrive - purdue.edu" from ever appearing. Shared with rshen-mbp, which
+    # signs into the same tenant.
+    ../../modules/darwin/onedrive-purdue.nix
+  ];
+
   # This Mac runs Determinate Nix, which manages its own daemon; nix-darwin must
   # keep its hands off. A machine installed with the upstream Nix installer
   # wants `true` instead, which is why this is per-host rather than shared.
@@ -78,45 +85,20 @@
   };
 
   home-manager.users.${user} = { config, lib, ... }: {
-    home.file = {
-      # Clean-named shortcuts to cloud sync roots.
-      #
-      # mkOutOfStoreSymlink is essential here: a plain `source` would try to
-      # copy the target into the nix store, which for a live cloud folder
-      # would be catastrophic. This emits a direct symlink to the real path.
-      #
-      # The sync roots themselves are NEVER renamed -- OneDrive's lives under
-      # ~/Library/CloudStorage and is managed by the macOS File Provider API,
-      # and Nutstore records its root path in ~/.nutstore/db/nutstore.db.
-      # These are additive aliases only.
-      #
-      # Host-specific: these are this machine's Purdue and Nutstore accounts.
-      "Purdue_OneDrive".source = config.lib.file.mkOutOfStoreSymlink
-        "${config.home.homeDirectory}/Library/CloudStorage/OneDrive-purdue.edu";
-
-      "Nutstore".source = config.lib.file.mkOutOfStoreSymlink
-        "${config.home.homeDirectory}/NutstoreFiles/Nutstore";
-    };
-
-    # Squat the path OneDrive uses for its own home-folder shortcut, so
-    # the space-laden "OneDrive - purdue.edu" cannot come back after an
-    # app update. OneDrive exposes no preference to disable it.
+    # Clean-named shortcut to this machine's Nutstore sync root.
     #
-    # A 0-byte file with uchg makes OneDrive's unlink() fail with EPERM,
-    # and its symlink() then fails with EEXIST. `hidden` keeps it out of
-    # Finder. Use ~/Purdue_OneDrive (declared above) instead.
+    # mkOutOfStoreSymlink is essential here: a plain `source` would try to copy
+    # the target into the nix store, which for a live cloud folder would be
+    # catastrophic. This emits a direct symlink to the real path.
     #
-    # To undo:  chflags nouchg ~/"OneDrive - purdue.edu" && rm ~/"OneDrive - purdue.edu"
-    home.activation.onedriveShortcutTombstone =
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        p="$HOME/OneDrive - purdue.edu"
-        # Only ever replace a symlink or nothing -- never a real file.
-        if [ -L "$p" ] || [ ! -e "$p" ]; then
-          /usr/bin/chflags nouchg "$p" 2>/dev/null || true
-          rm -f "$p" || true
-          touch "$p" || true
-        fi
-        /usr/bin/chflags uchg,hidden "$p" 2>/dev/null || true
-      '';
+    # The sync root itself is NEVER renamed -- Nutstore records its path in
+    # ~/.nutstore/db/nutstore.db. This is an additive alias only.
+    #
+    # Host-specific: Nutstore is installed on this Mac only. rshen-mbp reaches
+    # the same account over WebDAV (Zotero's file sync) and needs no client.
+    # The Purdue OneDrive alias that used to live here moved to
+    # modules/darwin/onedrive-purdue.nix when the second Mac grew it too.
+    home.file."Nutstore".source = config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/NutstoreFiles/Nutstore";
   };
 }
