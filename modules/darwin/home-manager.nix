@@ -3,8 +3,7 @@
 { config, pkgs, lib, home-manager, user, inputs, ... }:
 
 let
-  sharedFiles     = import ../shared/files.nix { inherit config pkgs; };
-  additionalFiles = import ./files.nix { inherit user config pkgs; };
+  sharedFiles = import ../shared/files.nix { inherit config pkgs; };
 in
 {
   imports = [
@@ -65,10 +64,7 @@ in
       home = {
         enableNixpkgsReleaseCheck = false;
         packages = pkgs.callPackage ./packages.nix {};
-        file = lib.mkMerge [
-          sharedFiles
-          additionalFiles
-        ];
+        file = sharedFiles;
         stateVersion = "23.11";
       };
       manual.manpages.enable = false;

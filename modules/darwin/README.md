@@ -9,8 +9,8 @@ e.g. `hosts/darwin/runxi-mbp.nix`.
 ```
 .
 ├── dock               # Declarative macOS dock (entries are per-host)
-├── casks.nix          # Homebrew casks; imported by the host file, so effectively per-host
-├── files.nix          # Static files placed into $HOME
+├── casks.nix          # Homebrew casks for runxi-mbp
+├── casks-rshen-mbp.nix # Homebrew casks for rshen-mbp
 ├── home-manager.nix   # Wires home-manager and imports homes/rshen
 ├── onedrive-purdue.nix # ~/Purdue_OneDrive alias + tombstone; imported by BOTH hosts
 ├── packages.nix       # Mac-only packages (portable ones live in homes/rshen)

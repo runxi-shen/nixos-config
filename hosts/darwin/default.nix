@@ -30,8 +30,8 @@
       # Both substituters need their signing key here. Listing a substituter
       # without its key is worse than omitting it: Nix contacts the cache and
       # then rejects everything it serves as unsigned, so you pay the latency
-      # and still build from source. The nix-community key was only ever in
-      # modules/shared/cachix/, which nothing imported.
+      # and still build from source. The nix-community key used to live in an
+      # unreferenced cache module; keeping it here makes it part of every Mac.
       trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
@@ -46,7 +46,7 @@
   # portable profile in homes/rshen -- which is what lets the same set ship to
   # the lab servers, where we control no system config.
   environment.systemPackages = [
-    agenix.packages."${pkgs.system}".default
+    agenix.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   # Authenticate sudo with Touch ID. Every rebuild needs sudo (see
