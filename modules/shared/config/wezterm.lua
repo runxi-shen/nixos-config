@@ -22,6 +22,17 @@ config.window_background_opacity = 1.0
 config.hide_tab_bar_if_only_one_tab = true
 config.default_cursor_style = 'SteadyBlock'
 
+-- ── Keys ────────────────────────────────────────────────────────────────
+-- Codex uses Ctrl-J to insert a newline without submitting the prompt.
+-- Send the equivalent LF byte so Shift-Enter works as the familiar shortcut.
+config.keys = {
+  {
+    key = 'Enter',
+    mods = 'SHIFT',
+    action = wezterm.action.SendString '\x0a',
+  },
+}
+
 -- ── Colors ─────────────────────────────────────────────────────────────
 -- The same palette as the Alacritty config, ported to WezTerm so both
 -- terminals look identical.
