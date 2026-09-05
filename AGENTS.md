@@ -111,8 +111,25 @@ nothing under `homes/` names a user.
 `"Runxis-MacBook-Pro"` is aliased to `"runxi-mbp"` because that is what `scutil` returns
 there. **Both Macs shipped with that same default name** -- macOS derives it from the
 ComputerName -- so `rshen-mbp` was renamed once at setup with
-`sudo scutil --set LocalHostName rshen-mbp`. Undo that and a bare `build-switch` on this
-Mac silently builds the other machine's config under the wrong username.
+`sudo scutil --set LocalHostName rshen-mbp`.
+
+That rename is **no longer imperative-only.** `hosts/darwin/rshen-mbp.nix` sets
+`networking.computerName` and `networking.localHostName` from the threaded `host`, and
+nix-darwin's networking module runs `scutil --set` unconditionally on every activation, so
+each switch reasserts the name. ComputerName is pinned alongside LocalHostName because
+macOS re-derives the latter from the former. `runxi-mbp` is **not** pinned and still leans
+on the alias.
+
+Two things this does *not* fix:
+
+- **Bootstrap.** The name must already be right before the *first* switch on a new Mac,
+  since `build-switch` resolves the host with `scutil --get LocalHostName` before any
+  config can run. The manual `scutil --set` in the README's new-Mac section stays.
+- **Drift between switches.** macOS can still move the name; activation only puts it back.
+  A drift to an unknown string fails loudly (`No darwinConfiguration named ...`) -- recover
+  with `nix run .#build-switch -- rshen-mbp`, which restores both names. A drift to
+  `Runxis-MacBook-Pro` is the dangerous one: that string *is* a valid key, so a bare
+  `build-switch` would silently build the other Mac's config under the wrong username.
 
 `rshen-mbp` runs Determinate Nix (`nix.enable = false`), so nix-darwin writes no
 `/etc/nix/nix.conf` and the `nix.settings` in `hosts/darwin/default.nix` are inert there;

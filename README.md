@@ -62,6 +62,18 @@ The apps resolve the target host at runtime from `scutil --get LocalHostName`, s
 
    This changes only the Bonjour/network name; `ComputerName` is untouched.
 
+   Then **pin it in step 3's host file** so it cannot drift back:
+
+   ```nix
+   networking.computerName = host;
+   networking.localHostName = host;
+   ```
+
+   `hosts/darwin/rshen-mbp.nix` does this. nix-darwin runs `scutil --set` on every
+   activation, so each switch reasserts the name; pinning `ComputerName` too matters
+   because macOS re-derives `LocalHostName` from it. The manual command above is still
+   required first — the host has to resolve before any config can run.
+
 3. **Write `hosts/darwin/<host>.nix`.** Copy `hosts/darwin/runxi-mbp.nix` and keep only what
    applies. Two things are mandatory:
 

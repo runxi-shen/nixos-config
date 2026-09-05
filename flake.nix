@@ -208,9 +208,19 @@
           # BOTH Macs shipped with that same default name. rshen-mbp was
           # therefore renamed once, at setup, with
           #     sudo scutil --set LocalHostName rshen-mbp
-          # so that this alias stays unambiguously runxi-mbp's. Undo that rename
-          # and a bare `build-switch` on the new Mac would silently build the
-          # old machine's config, under the wrong username.
+          # so that this alias stays unambiguously runxi-mbp's.
+          #
+          # That rename is now held in place declaratively: hosts/darwin/
+          # rshen-mbp.nix pins networking.{computerName,localHostName} to its
+          # `host`, which nix-darwin reasserts with `scutil --set` on every
+          # activation. runxi-mbp is deliberately NOT pinned -- this alias is
+          # what lets it rebuild with no argument and no rename.
+          #
+          # The alias is also why a drift on rshen-mbp is worth catching early.
+          # An unknown name fails loudly; a drift back to THIS string does not,
+          # because it resolves here, and a bare `build-switch` on the new Mac
+          # would then silently build the old machine's config under the wrong
+          # username.
           "Runxis-MacBook-Pro" = runxi-mbp;
         };
     };
