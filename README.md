@@ -143,8 +143,9 @@ overlays/default.nix   named overlays, exported as outputs.overlays
 apps/aarch64-darwin/   build, build-switch, rollback, clean, key management
 ```
 
-`CLAUDE.md` / `AGENTS.md` carry the working notes — invariants, footguns, and where a given
-package belongs. `docs/multi-machine-migration.md` records the 2026-09 restructure phase by
+`AGENTS.md` is the canonical set of working notes — invariants, footguns, and where a given
+package belongs. Tool-specific entry points such as `CLAUDE.md` are symlinks to it so they
+cannot drift. `docs/multi-machine-migration.md` records the 2026-09 restructure phase by
 phase, including what verification found.
 
 ## Lineage

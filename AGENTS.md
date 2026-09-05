@@ -1,6 +1,8 @@
-# AGENTS.md
+# Repository agent guide
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This is the canonical guidance for coding agents working in this repository. Tool-specific
+entry points such as `CLAUDE.md` should be symlinks to this file so the instructions cannot
+drift.
 
 ## Repository Overview
 
@@ -94,10 +96,11 @@ hosts/darwin/
   runxi-mbp.nix        user runxishen: casks, dock, launchd agents, Nutstore link
   rshen-mbp.nix        user rshen: casks, dock
                        BOTH import modules/darwin/onedrive-purdue.nix
-modules/darwin/        casks.nix (runxi-mbp), casks-rshen-mbp.nix, dock/, files.nix,
+modules/darwin/        casks.nix (runxi-mbp), casks-rshen-mbp.nix, dock/,
                        home-manager.nix, onedrive-purdue.nix, packages.nix,
                        secrets.nix
-modules/shared/        default.nix (nixpkgs config + overlays), files.nix, fonts.nix, cachix/
+modules/shared/        default.nix (nixpkgs config + overlays), files.nix, fonts.nix,
+                       config/wezterm.lua
 overlays/default.nix   NAMED overlays, exported as outputs.overlays
 apps/aarch64-darwin/   build, build-switch, rollback, clean, *-keys
 taps/zenkit/           local Homebrew tap
