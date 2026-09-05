@@ -13,7 +13,7 @@
 # state that does not exist here. Each is a small edit away if this machine ever
 # grows the same setup. (Zotero needs no Nutstore client on either Mac: it syncs
 # attachments over WebDAV straight to dav.jianguoyun.com.)
-{ config, pkgs, lib, user, ... }:
+{ config, pkgs, lib, user, host, ... }:
 
 {
   imports = [
@@ -26,6 +26,31 @@
     # never appears even once. Switch BEFORE signing in.
     ../../modules/darwin/onedrive-purdue.nix
   ];
+
+  # Pin this machine's name, from the same string that keys it in flake.nix.
+  #
+  # Both Macs shipped as "Runxis-MacBook-Pro" (macOS derives LocalHostName from
+  # ComputerName), so this one was renamed at setup with a one-off
+  # `sudo scutil --set LocalHostName rshen-mbp`. That was imperative state, and
+  # it drifted: LocalHostName was observed back at "R-Shen-MBP", which made a
+  # bare `nix run .#build-switch` fail outright -- apps/aarch64-darwin/build-switch
+  # resolves the host with `scutil --get LocalHostName` and there is no
+  # darwinConfiguration under that name.
+  #
+  # nix-darwin runs `scutil --set` unconditionally on every activation, so these
+  # now reassert the name each switch instead of trusting it to stay put.
+  # ComputerName is set alongside LocalHostName because macOS re-derives the
+  # latter from the former; pinning only one leaves the drift path open.
+  #
+  # Deriving both from `host` rather than writing "rshen-mbp" twice makes it
+  # impossible for the machine's name and its flake key to disagree -- which is
+  # the only property that matters for a no-argument build-switch.
+  #
+  # networking.hostName (scutil --set HostName) is deliberately left unset: it
+  # is unset on this machine today, and `hostname` reports the DHCP-assigned
+  # name. Pinning it would be a behaviour change unrelated to this drift.
+  networking.computerName = host;
+  networking.localHostName = host;
 
   # This Mac runs Determinate Nix, which manages its own daemon; nix-darwin must
   # keep its hands off. A machine installed with the upstream Nix installer
