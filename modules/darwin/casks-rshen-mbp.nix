@@ -15,6 +15,12 @@ _:
   # Communication Tools
   "slack"
   "zoom"
+  # The Purdue side of the fleet: Teams for chat/meetings, Outlook for the
+  # purdue.edu mailbox and calendar. Both are casks because nixpkgs carries
+  # neither, and both auto_update themselves, so nix-darwin pins no version.
+  # Outlook is a free download but wants the Microsoft 365 sign-in to activate.
+  "microsoft-teams"
+  "microsoft-outlook"
 
   # Networking
   # How this Mac reaches oppy/spirit/karkinos off-campus; those machines get
