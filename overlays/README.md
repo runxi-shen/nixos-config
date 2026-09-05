@@ -11,8 +11,7 @@ specific overlay to a consuming flake, which requires it to have a name. Pattern
 `afermg/nixos-config`.
 
 **Adding an overlay:** add a named attribute to `default.nix`. Give it a file of its own
-only when it carries enough explanation to be worth separating — `pandas-stubs` does,
-because its comment records the upstream breakage that tells us when it is safe to delete.
+only when it carries enough explanation to be worth separating.
 
 **Flakes only see tracked files.** `git add` before building.
 
@@ -21,7 +20,6 @@ because its comment records the upstream breakage that tells us when it is safe 
 | name | purpose |
 |---|---|
 | `claude-code` | Claude Code from the `sadjow/claude-code-nix` flake input, taking `inputs` as an argument — something the old bare `final: prev:` loader could not do |
-| `pandas-stubs` | Skips a failing test suite that blocked `markitdown` via `pdfplumber`. **Likely obsolete** at the current pin — `doCheck = false` landed upstream and only `pythonImportsCheck = [ ]` still has effect. Re-check and delete during the next `nix flake update`. |
 
 ## Shape
 

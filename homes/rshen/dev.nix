@@ -13,7 +13,6 @@ let
     virtualenv
     requests
     pyyaml
-    markitdown # Convert files/office docs to Markdown (CLI + library)
   ]);
 in
 {
@@ -27,7 +26,6 @@ in
     glab # GitLab CLI
     go # Go programming language
     gopls # Go language server
-    markitdown-mcp # MCP server exposing markitdown to AI tools
     nodejs_22 # Node.js JavaScript runtime (LTS)
     myPython # Python 3 with common packages
     pnpm # Fast npm alternative; `dsh plugin` forwards to it

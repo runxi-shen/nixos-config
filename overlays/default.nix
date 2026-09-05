@@ -17,11 +17,4 @@
   claude-code = final: _prev: {
     claude-code = inputs.claude-code.packages.${final.stdenv.hostPlatform.system}.default;
   };
-
-  # Kept in its own file: the comment explaining the upstream breakage is the
-  # thing that tells us when it is safe to delete.
-  #
-  # `pandas-stubs` used to live here for the same reason and has been retired --
-  # doCheck = false landed upstream, so the overlay had no effect left.
-  jupyter-server = import ./jupyter-server-flaky-test.nix;
 }
