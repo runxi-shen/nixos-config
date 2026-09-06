@@ -52,6 +52,9 @@ _:
   "runxishen/openwhispr/openwhispr"
 
   # Productivity
+  "microsoft-word"
+  "microsoft-powerpoint"
+  "microsoft-excel"
   "obsidian"
   "zotero"
   # From local tap (taps/zenkit)
