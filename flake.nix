@@ -178,6 +178,9 @@
                     "runxishen/homebrew-zenkit" = pkgs.runCommandLocal "homebrew-zenkit" { } ''
                       cp -R ${./taps/zenkit} $out
                     '';
+                    "runxishen/homebrew-openwhispr" = pkgs.runCommandLocal "homebrew-openwhispr" { } ''
+                      cp -R ${./taps/openwhispr} $out
+                    '';
                   };
                   mutableTaps = false;
                   autoMigrate = true;

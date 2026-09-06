@@ -1,5 +1,6 @@
 # Portable CLI. Everything here must build and be useful on both aarch64-darwin
-# and x86_64-linux -- this list ships to the lab servers unchanged.
+# and x86_64-linux. The full profile currently imports this on the Macs; the lab
+# servers import only agents.nix through the narrow exported module.
 #
 # Anything Mac- or desktop-only belongs in ./gui.nix; anything specific to one
 # server belongs in ./machines/<host>.nix.

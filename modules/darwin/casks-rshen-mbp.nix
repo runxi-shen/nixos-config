@@ -47,6 +47,9 @@ _:
 
   # AI Assistants
   "chatgpt"
+  # Pinned, checksummed upstream release from the local tap. The packaged app
+  # bundles its local speech engine; models remain mutable user data.
+  "runxishen/openwhispr/openwhispr"
 
   # Productivity
   "obsidian"

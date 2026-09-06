@@ -103,7 +103,7 @@ modules/shared/        default.nix (nixpkgs config + overlays), files.nix, fonts
                        config/wezterm.lua
 overlays/default.nix   NAMED overlays, exported as outputs.overlays
 apps/aarch64-darwin/   build, build-switch, rollback, clean, *-keys
-taps/zenkit/           local Homebrew tap
+taps/                  local Homebrew taps for casks absent from homebrew-cask
 ```
 
 `darwinConfigurations` is keyed by **hostname**, not system. `mkDarwin { host, user }` is an
@@ -150,16 +150,16 @@ appear not to exist. This is the single most common failure mode here.
 
 | Scope | Location |
 |---|---|
-| Portable CLI (Macs **and** lab servers) | `homes/rshen/packages.nix` |
-| Portable dev toolchain | `homes/rshen/dev.nix` |
+| Portable CLI (full profile; Macs today) | `homes/rshen/packages.nix` |
+| Portable dev toolchain (full profile; Macs today) | `homes/rshen/dev.nix` |
 | Coding agents (shared with the servers via the export) | `homes/rshen/agents.nix` |
 | Mac-only CLI | `modules/darwin/packages.nix` |
 | Mac-only GUI / fonts | `homes/rshen/gui.nix` |
 | macOS apps | per-host: `modules/darwin/casks.nix` (runxi-mbp) or `casks-rshen-mbp.nix`. Adding an app to one Mac does NOT add it to the other. |
 
-**`homes/rshen/dev.nix` and `agents.nix` reach the shared lab servers.** Adding a line there
-installs software on machines fifteen people use. The bar is "I want this on
-oppy/spirit/karkinos too."
+**Only `homes/rshen/agents.nix` reaches the shared lab servers today.** The rest of the full
+profile stays portable but is imported only by the Macs. Expanding the exported module must
+be coordinated with neusis because it changes the home configuration on shared machines.
 
 ### Constraints inside `homes/`
 

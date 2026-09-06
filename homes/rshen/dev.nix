@@ -1,10 +1,9 @@
-# Development toolchain. Portable: the lab servers get exactly this set too,
-# which is the point of exporting the profile rather than duplicating it in
-# neusis.
+# Development toolchain for the full profile. Keep it portable so individual
+# pieces can move into the exported Linux module later, but today the lab
+# servers import only agents.nix.
 #
-# Mac-only dev tools go in modules/darwin/packages.nix instead. Adding one here
-# silently installs it on every shared lab machine, so the bar for this file is
-# "I want this on oppy/spirit/karkinos too".
+# Mac-only dev tools go in modules/darwin/packages.nix instead. The bar for this
+# file is "this is appropriate on every platform using the full profile".
 { pkgs, ... }:
 
 let
