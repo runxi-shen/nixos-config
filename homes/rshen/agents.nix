@@ -39,8 +39,13 @@ let
 in
 {
   home.packages = [
-    # 0.144.4 here vs 0.92.0 in neusis's pin.
-    ourPkgs.codex
+    # Mac releases need to keep pace with model support independently of
+    # nixpkgs (0.149.0 cannot use GPT-6 Astra). Linux retains its existing
+    # nixpkgs package; the prebuilt Mac release is never evaluated there.
+    (if system == "aarch64-darwin" then
+      ourPkgs.callPackage ../../modules/darwin/codex-package.nix { }
+    else
+      ourPkgs.codex)
 
     # Absent entirely from neusis's pin. Upstream is earendil-works/pi, which is
     # the same repository as the older badlogic/pi-mono path (GitHub repo id
