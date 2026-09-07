@@ -277,7 +277,23 @@ in
         # Was a pair of absolute per-platform branches keyed on isLinux /
         # isDarwin. homeDirectory already encodes both, for any username.
         includes = [ "${config.home.homeDirectory}/.ssh/config_external" ];
-        settings = {
+        # The shared lab servers, reached over Tailscale MagicDNS. Declared here
+        # rather than left to `config_external` so that anything reading
+        # ~/.ssh/config -- VS Code's Remote-SSH host list in particular -- is
+        # generated like the rest of the profile. The tailnet FQDN is spelled
+        # out so resolution does not depend on the MagicDNS search domain.
+        # `rshen` is the account on all three; see `home.username` above.
+        settings = lib.genAttrs [ "karkinos" "oppy" "spirit" ] (host: {
+          HostName = "${host}.tail5e510f.ts.net";
+          User = "rshen";
+          # known_hosts was populated under the short names, and MagicDNS hands
+          # out no key material -- pin verification to the short name so the
+          # FQDN above does not read as a brand-new, untrusted host.
+          HostKeyAlias = host;
+          # Tailscale can silently drop an idle relay; keep the VS Code remote
+          # session from hanging on a dead socket.
+          ServerAliveInterval = 60;
+        }) // {
           "*" = {
             # Set the default values we want to keep
             SendEnv = [ "LANG" "LC_*" ];
