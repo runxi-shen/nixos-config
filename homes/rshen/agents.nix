@@ -40,8 +40,8 @@ in
 {
   home.packages = [
     # Mac releases need to keep pace with model support independently of
-    # nixpkgs (0.149.0 cannot use GPT-6 Astra). Linux retains its existing
-    # nixpkgs package; the prebuilt Mac release is never evaluated there.
+    # nixpkgs. Linux tracks the pinned nixpkgs package (currently 0.154.0);
+    # the prebuilt Mac release is never evaluated there.
     (if system == "aarch64-darwin" then
       ourPkgs.callPackage ../../modules/darwin/codex-package.nix { }
     else
