@@ -1,6 +1,6 @@
 cask "openwhispr" do
-  version "1.9.2"
-  sha256 "76c5a1f3a22dd478df6239ac9cb506cb4bd07b6d08c88861d14c4dd26806863d"
+  version "1.10.2"
+  sha256 "9a0ebf207a96ca7d039d45299a80d0da1172a6aebed52fd63a65e09cff44463d"
 
   url "https://github.com/OpenWhispr/openwhispr/releases/download/v#{version}/OpenWhispr-#{version}-arm64.dmg"
   name "OpenWhispr"

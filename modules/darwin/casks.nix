@@ -37,6 +37,12 @@ _:
 
   # AI Assistants
   "chatgpt"
+  # Pinned, checksummed upstream release from the local tap. The packaged app
+  # bundles its local speech engine; models remain mutable user data. Replaces
+  # the hand-built /Applications/OpenWhispr.app that used to live here
+  # imperatively -- the tap is shared with rshen-mbp, so both Macs track the
+  # same pinned version.
+  "runxishen/openwhispr/openwhispr"
 
   # Productivity
   "obsidian"
