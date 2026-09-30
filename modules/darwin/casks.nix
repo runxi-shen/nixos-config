@@ -12,7 +12,10 @@ _:
   "zoom"
 
   # Networking
-  "tailscale-app"
+  # NB: no "tailscale-app" here. This host runs nixpkgs' tailscaled as a system
+  # LaunchDaemon (modules/darwin/always-on-server.nix) so the tailnet is up
+  # before login. The cask's own tailscaled would fight it for the utun
+  # interface. The GUI app stays on rshen-mbp.
 
   # Utility Tools
   "1password"

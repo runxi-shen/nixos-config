@@ -15,6 +15,11 @@
     # "OneDrive - purdue.edu" from ever appearing. Shared with rshen-mbp, which
     # signs into the same tenant.
     ../../modules/darwin/onedrive-purdue.nix
+
+    # Always-on posture: sshd, tailscaled-as-daemon, never-sleep, clamshell.
+    # This host lives on a shelf and is driven from a phone and the other Mac;
+    # rshen-mbp deliberately does NOT import this.
+    ../../modules/darwin/always-on-server.nix
   ];
 
   # This Mac runs Determinate Nix, which manages its own daemon; nix-darwin must
@@ -25,6 +30,34 @@
 
   # Apps installed by Homebrew rather than Nix -- per-machine by nature.
   homebrew.casks = pkgs.callPackage ../../modules/darwin/casks.nix { };
+
+  # Make Homebrew AUTHORITATIVE on this host: anything installed that the config
+  # does not name gets uninstalled on the next switch.
+  #
+  # READ THIS BEFORE COPYING IT TO ANOTHER HOST -- the scope is wider than it
+  # looks. "cleanup" covers BOTH casks and FORMULAE, and `homebrew.brews` is
+  # unset here, so the declared formula set is EMPTY and every hand-installed
+  # formula is drift. Enabling this purged ten of them on first switch
+  # (mkcert, potrace, gettext and seven dependencies). That is the intended
+  # end state for this machine -- brew's job here is GUI casks, and CLI tools
+  # come from Nix (the three worth keeping now live in homes/rshen/packages.nix)
+  # -- but it is a one-way door the first time you flip it. Inventory with
+  # `brew list --formula` and `brew list --cask` first.
+  #
+  # Set per-host rather than in modules/darwin/home-manager.nix because the
+  # default ("none") is the right one for a machine a human uses interactively:
+  # there, a hand-installed package is a decision, not drift. This host is
+  # driven remotely and must match its config exactly, so the opposite holds.
+  #
+  # The motivating case: dropping "tailscale-app" from the cask list did NOT
+  # uninstall it, because removal from the list only stops nix-darwin from
+  # *managing* a cask. The GUI and its network extension stayed installed and
+  # contended with the tailscaled daemon always-on-server.nix introduces.
+  #
+  # "uninstall" and not "zap": zap additionally deletes user data, so a package
+  # briefly dropped from the config by mistake would take its settings with it.
+  # Uninstall is recoverable; zap is not.
+  homebrew.onActivation.cleanup = "uninstall";
 
   local.dock.entries = [
     { path = "/Applications/Slack.app/"; }

@@ -33,6 +33,18 @@
     tree # Directory tree viewer
     wget # File downloader
 
+    # Local TLS & i18n tooling
+    #
+    # These three arrived here from Homebrew formulae. Once runxi-mbp set
+    # homebrew.onActivation.cleanup = "uninstall", every formula not named in
+    # the config counted as drift and was purged -- so anything still wanted
+    # has to be declared, and Nix is the right place for a plain CLI.
+    gettext # msgfmt/xgettext -- i18n message catalogues
+    mkcert # Locally-trusted dev certificates. NB: the root CA it generates is
+    # user data under ~/Library/Application Support/mkcert and is NOT managed
+    # here; removing this package never invalidates certs already issued.
+    potrace # Bitmap -> vector tracing; pairs with Inkscape
+
     # OCR & document processing
     ocrmypdf # Add a searchable text layer to scanned PDFs (uses tesseract + ghostscript)
     poppler-utils # pdftoppm / pdftotext / pdfinfo -- render and extract PDFs
