@@ -11,6 +11,11 @@ _:
   "claude"
   "visual-studio-code"
   "wezterm"
+  # Google's AI-native coding environment. The plain `antigravity` cask is the
+  # main desktop client (Antigravity.app); antigravity-ide and antigravity-cli
+  # are the narrower VS Code fork and CLI respectively. auto_updates, so
+  # nix-darwin pins no version.
+  "antigravity"
 
   # Communication Tools
   "slack"
@@ -44,6 +49,10 @@ _:
   # modules/darwin/onedrive-purdue.nix -- installing the cask alone is not
   # enough to keep that folder from appearing.
   "onedrive"
+  # Google's macOS client. Like onedrive, it ships as a .pkg (GoogleDrive.pkg)
+  # and auto_updates, so nix-darwin pins no version and never has to chase one.
+  # The cask name is `google-drive`; the app itself appears as "Google Drive".
+  "google-drive"
 
   # AI Assistants
   "chatgpt"
