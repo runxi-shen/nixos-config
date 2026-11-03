@@ -5,11 +5,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "codex";
-  version = "0.153.4";
+  version = "0.165.0";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/rust-v${finalAttrs.version}/codex-package-aarch64-apple-darwin.tar.gz";
-    hash = "sha256-NUONofv3ptt92zvOyERI+mAVuhiEYUcql9nR2n2cQ1M=";
+    hash = "sha256-NNEjhNkPjgmwuauqvyoKwCpSCTsTFQSuryghB/VKRLI=";
   };
 
   sourceRoot = ".";
@@ -35,7 +35,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     test "$("$out/bin/codex" --version)" = "codex-cli ${finalAttrs.version}"
     "$out/bin/codex-code-mode-host" --help > /dev/null
     "$out/codex-path/rg" --version > /dev/null
-    "$out/codex-resources/zsh/bin/zsh" --version > /dev/null
+    # 0.165.0 dropped the bundled zsh and ships a voice host instead. It is
+    # an audio daemon with no --help/--version, so just verify it is present
+    # and executable.
+    test -x "$out/codex-resources/voice/bin/codex-voice-host"
     runHook postInstallCheck
   '';
 
