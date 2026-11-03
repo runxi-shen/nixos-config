@@ -40,7 +40,7 @@ in
 {
   home.packages = [
     # Mac releases need to keep pace with model support independently of
-    # nixpkgs. Linux tracks the pinned nixpkgs package (currently 0.154.0);
+    # nixpkgs. Linux tracks the pinned nixpkgs package (currently 0.164.0);
     # the prebuilt Mac release is never evaluated there.
     (if system == "aarch64-darwin" then
       ourPkgs.callPackage ../../modules/darwin/codex-package.nix { }
